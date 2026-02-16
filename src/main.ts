@@ -1,33 +1,33 @@
 import { NestFactory } from '@nestjs/core';
-import { AppModule } from './app.module';
-import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { ValidationPipe } from '@nestjs/common';
+import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
+import { AppModule } from './app.module';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+
+  // 1. Habilita CORS para o seu App Mobile conectar
   app.enableCors();
-  // Validação Global
+
+  // 2. Ativa as validações dos DTOs (@IsNotEmpty, etc)
   app.useGlobalPipes(new ValidationPipe({
     whitelist: true,
     forbidNonWhitelisted: true,
     transform: true,
   }));
 
-  // Configuração do Swagger
+  // 3. Configura o Swagger (Acessível em /api)
   const config = new DocumentBuilder()
-    .setTitle('EUFIT V2 Ecosystem')
-    .setDescription('API da plataforma de gestão de franquias e treinos.')
-    .setVersion('2.0')
-    .addBearerAuth()
+    .setTitle('EUFIT API')
+    .setDescription('Documentação do Ecossistema Fitness EUFIT')
+    .setVersion('1.0')
+    .addBearerAuth() // Permite testar rotas protegidas com Token
     .build();
-
-  const document = SwaggerModule.createDocument(app, config);
   
-  // AQUI É O PULO DO GATO: O primeiro argumento define a URL
-  // Se estiver 'api', a url será /api
-  SwaggerModule.setup('api', app, document); 
+  const document = SwaggerModule.createDocument(app, config);
+  SwaggerModule.setup('api', app, document);
 
-  app.enableCors();
+  // 4. Porta que o Docker espera (3000 interna -> 80 externa)
   await app.listen(3000);
 }
 bootstrap();

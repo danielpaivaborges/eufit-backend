@@ -1,23 +1,22 @@
 import { Module } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
-import { UsersModule } from '../users/users.module';
-import { PassportModule } from '@nestjs/passport';
+import { PrismaModule } from '../prisma/prisma.module'; // Verifique se você tem o PrismaModule global ou importe aqui
 import { JwtModule } from '@nestjs/jwt';
-import { jwtConstants } from './constants';
-import { JwtStrategy } from './jwt.strategy';
+import { PassportModule } from '@nestjs/passport';
 
 @Module({
   imports: [
-    UsersModule,
+    PrismaModule,
     PassportModule,
     JwtModule.register({
-      secret: jwtConstants.secret,
-      signOptions: { expiresIn: '7d' },
+      global: true,
+      secret: process.env.JWT_SECRET || 'fallback_secret_para_dev', // Usa a variável do seu .env no servidor
+      signOptions: { expiresIn: '7d' }, // Token válido por 7 dias (ideal para mobile)
     }),
   ],
   controllers: [AuthController],
-  providers: [AuthService, JwtStrategy],
+  providers: [AuthService],
   exports: [AuthService],
 })
 export class AuthModule {}

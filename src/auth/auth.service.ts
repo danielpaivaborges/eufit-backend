@@ -1,50 +1,124 @@
-import { Injectable, ConflictException, UnauthorizedException } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service'; // Certifique-se de ter o PrismaService
-import * as bcrypt from 'bcrypt';
+import {
+  Injectable,
+  ConflictException,
+  UnauthorizedException,
+  InternalServerErrorException,
+} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
+import { PrismaService } from '../prisma/prisma.service';
 import { RegisterDto } from './dto/register.dto';
+import { LoginDto } from './dto/login.dto';
+import * as bcrypt from 'bcrypt';
 
 @Injectable()
 export class AuthService {
   constructor(
-    private prisma: PrismaService,
-    private jwtService: JwtService,
+    private readonly prisma: PrismaService,
+    private readonly jwtService: JwtService,
   ) {}
 
-  async register(data: RegisterDto) {
-    // 1. Verificar se e-mail existe
-    const userExists = await this.prisma.user.findUnique({ where: { email: data.email } });
-    if (userExists) throw new ConflictException('Este e-mail já está em uso');
+  /**
+   * Registra um novo usuário criando automaticamente:
+   * 1. O registro de identidade (User)
+   * 2. A carteira financeira (Wallet)
+   * 3. O perfil de aluno (StudentProfile)
+   */
+  async register(registerDto: RegisterDto) {
+    const { name, phone, email, password } = registerDto;
 
-    // 2. Criptografar senha
-    const hashedPassword = await bcrypt.hash(data.password, 10);
-
-    // 3. Criar usuário e sua Wallet inicial (baseado no seu schema)
-    const user = await this.prisma.user.create({
-      data: {
-        name: data.name,
-        email: data.email,
-        password: hashedPassword,
-        wallet: { create: {} }, // Cria a carteira junto com o usuário
-        studentProfile: { create: { referralCode: `REF-${Math.random().toString(36).substring(7).toUpperCase()}` } }
-      },
+    // 1. Verificar se o telefone já está em uso
+    const userExists = await this.prisma.user.findUnique({
+      where: { phone },
     });
 
-    return { id: user.id, email: user.email, name: user.name };
+    if (userExists) {
+      throw new ConflictException('Este número de telefone já está cadastrado.');
+    }
+
+    try {
+      // 2. Criptografar a senha
+      const salt = await bcrypt.genSalt(10);
+      const hashedPassword = await bcrypt.hash(password, salt);
+
+      // 3. Criar o usuário e estruturas relacionadas (Transação atômica)
+      const user = await this.prisma.user.create({
+        data: {
+          name,
+          phone,
+          email: email || null,
+          password: hashedPassword,
+          status: 'ACTIVE',
+          // Criando carteira e perfil de aluno automaticamente seguindo seu schema
+          wallet: {
+            create: {
+              balanceAvailable: 0,
+            },
+          },
+          studentProfile: {
+            create: {
+              referralCode: `FIT-${Math.random().toString(36).substring(7).toUpperCase()}`,
+            },
+          },
+        },
+        include: {
+          wallet: true,
+          studentProfile: true,
+        },
+      });
+
+      // Retorna o usuário sem a senha
+      return {
+        id: user.id,
+        name: user.name,
+        phone: user.phone,
+        status: user.status,
+      };
+    } catch (error) {
+      throw new InternalServerErrorException(
+        'Erro ao criar usuário no banco de dados.',
+      );
+    }
   }
 
-  async login(email: string, pass: string) {
-    const user = await this.prisma.user.findUnique({ where: { email } });
-    if (!user) throw new UnauthorizedException('Credenciais inválidas');
+  /**
+   * Valida as credenciais (telefone e senha) e retorna o Token JWT
+   */
+  async login(loginDto: LoginDto) {
+    const { phone, password } = loginDto;
 
-    const isMatch = await bcrypt.compare(pass, user.password);
-    if (!isMatch) throw new UnauthorizedException('Credenciais inválidas');
+    // 1. Buscar usuário pelo telefone
+    const user = await this.prisma.user.findUnique({
+      where: { phone },
+    });
 
-    const payload = { sub: user.id, email: user.email, role: user.currentRole };
-    
+    if (!user) {
+      throw new UnauthorizedException('Telefone ou senha incorretos.');
+    }
+
+    // 2. Validar a senha criptografada
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+
+    if (!isPasswordValid) {
+      throw new UnauthorizedException('Telefone ou senha incorretos.');
+    }
+
+    // 3. Gerar o Payload do JWT
+    const payload = {
+      sub: user.id,
+      phone: user.phone,
+      role: user.currentRole,
+    };
+
+    // 4. Retornar token e dados básicos do usuário
     return {
       access_token: await this.jwtService.signAsync(payload),
-      user: { id: user.id, name: user.name, role: user.currentRole }
+      user: {
+        id: user.id,
+        name: user.name,
+        phone: user.phone,
+        role: user.currentRole,
+        status: user.status,
+      },
     };
   }
 }
