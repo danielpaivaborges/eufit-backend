@@ -22,4 +22,4 @@ RUN npm run build
 EXPOSE 3000
 
 # Usamos o caminho padrão do NestJS que é dist/main
-CMD sh -c "npx prisma db push && node dist/main.js"
+CMD sh -c "npx prisma db push && node $(find dist -name main.js)"
