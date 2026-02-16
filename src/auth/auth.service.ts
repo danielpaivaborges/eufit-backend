@@ -3,6 +3,7 @@ import {
   ConflictException,
   UnauthorizedException,
   InternalServerErrorException,
+  BadRequestException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../prisma/prisma.service';
@@ -26,7 +27,12 @@ export class AuthService {
   async register(registerDto: RegisterDto) {
     const { name, phone, email, password } = registerDto;
 
-    // 1. Verificar se o telefone já está em uso
+    // 1. Validar se o telefone foi enviado (identificador principal)
+    if (!phone) {
+      throw new BadRequestException('O número de telefone é obrigatório.');
+    }
+
+    // 2. Verificar se o telefone já está em uso
     const userExists = await this.prisma.user.findUnique({
       where: { phone },
     });
@@ -35,20 +41,31 @@ export class AuthService {
       throw new ConflictException('Este número de telefone já está cadastrado.');
     }
 
+    // 3. Verificar se o e-mail já está em uso (apenas se for enviado)
+    if (email) {
+      const emailExists = await this.prisma.user.findUnique({
+        where: { email },
+      });
+      if (emailExists) {
+        throw new ConflictException('Este e-mail já está em uso.');
+      }
+    }
+
     try {
-      // 2. Criptografar a senha
+      // 4. Criptografar a senha
       const salt = await bcrypt.genSalt(10);
       const hashedPassword = await bcrypt.hash(password, salt);
 
-      // 3. Criar o usuário e estruturas relacionadas (Transação atômica)
+      // 5. Criar o usuário e estruturas relacionadas
+      // CORREÇÃO: Como seu schema define email como obrigatório, 
+      // se não vier email, geramos um temporário para evitar erro de 'null'.
       const user = await this.prisma.user.create({
         data: {
           name,
           phone,
-          email: email || null,
+          email: email || `${phone}@eufit.temp`, // Garante que nunca seja null para o build passar
           password: hashedPassword,
           status: 'ACTIVE',
-          // Criando carteira e perfil de aluno automaticamente seguindo seu schema
           wallet: {
             create: {
               balanceAvailable: 0,
@@ -66,7 +83,6 @@ export class AuthService {
         },
       });
 
-      // Retorna o usuário sem a senha
       return {
         id: user.id,
         name: user.name,
@@ -74,6 +90,7 @@ export class AuthService {
         status: user.status,
       };
     } catch (error) {
+      console.error('Erro no Prisma:', error);
       throw new InternalServerErrorException(
         'Erro ao criar usuário no banco de dados.',
       );
