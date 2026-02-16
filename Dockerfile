@@ -1,36 +1,30 @@
-# --- Estágio 1: Build ---
-FROM node:18-alpine AS builder
+FROM node:18-alpine
 
-# INSTALAÇÃO DO OPENSSL (Correção do erro)
+# Instala dependências nativas
 RUN apk add --no-cache openssl
 
 WORKDIR /app
 
+# Copia arquivos de configuração
 COPY package*.json ./
-# Copia a pasta prisma (do src para a raiz do container, conforme ajustamos antes)
+COPY tsconfig*.json ./
+
+# Copia a pasta prisma (do seu src/prisma para a raiz do container)
 COPY src/prisma ./prisma/
 
+# Instala as dependências
 RUN npm install
 
+# Copia todo o código fonte
 COPY . .
 
-# Gera o cliente do Prisma
+# Gera o Prisma Client e Compila o código NestJS
 RUN npx prisma generate
 RUN npm run build
 
-# --- Estágio 2: Produção ---
-FROM node:18-alpine
-
-# INSTALAÇÃO DO OPENSSL TAMBÉM NA PRODUÇÃO (Essencial)
-RUN apk add --no-cache openssl
-
-WORKDIR /app
-
-COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/package*.json ./
-COPY --from=builder /app/dist ./dist
-COPY --from=builder /app/prisma ./prisma
-
+# Expõe a porta
 EXPOSE 3000
 
-CMD ["sh", "-c", "npx prisma db push && npm run start:prod"]
+# Comando de inicialização: Sincroniza o banco e roda o arquivo que o NestJS gera no build
+# O arquivo principal costuma ficar em dist/main.js ou dist/src/main.js
+CMD ["sh", "-c", "npx prisma db push && node dist/main.js"]
