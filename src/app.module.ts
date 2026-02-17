@@ -1,17 +1,14 @@
 import { Module } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config'; // Necessário para ler o .env do Docker
+import { ConfigModule } from '@nestjs/config';
 import { PrismaModule } from './prisma/prisma.module';
-import { UsersModule } from './users/users.module';
+// Remova: import { UsersModule } ...
 import { AuthModule } from './auth/auth.module';
 
 @Module({
   imports: [
-    // IsGlobal faz com que o .env fique disponível em todo o projeto sem importar de novo
-    ConfigModule.forRoot({
-      isGlobal: true, 
-    }),
+    ConfigModule.forRoot({ isGlobal: true }),
     PrismaModule,
-    UsersModule,
+    // Remova: UsersModule,
     AuthModule,
   ],
   controllers: [],
