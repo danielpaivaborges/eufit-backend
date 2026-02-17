@@ -1,12 +1,24 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsEmail, IsNotEmpty, IsOptional, IsString, MinLength } from 'class-validator';
+import { IsEmail, IsNotEmpty, IsString, IsOptional } from 'class-validator';
 
 export class CreateUserDto {
-  @ApiProperty() @IsString() @IsNotEmpty() name: string;
-  @ApiProperty() @IsEmail() email: string;
-  @ApiProperty() @IsString() @MinLength(6) password: string;
-  @ApiProperty({ required: false }) @IsOptional() @IsString() cpf?: string;
-  @ApiProperty({ required: false }) @IsOptional() @IsString() phone?: string;
-  @ApiProperty({ required: false }) @IsOptional() @IsString() city?: string;
-  @ApiProperty({ required: false }) @IsOptional() @IsString() state?: string;
+  @ApiProperty({ example: 'Daniel Silva' })
+  @IsNotEmpty()
+  @IsString()
+  name: string;
+
+  @ApiProperty({ example: '5531999999999' })
+  @IsNotEmpty() // Agora é obrigatório!
+  @IsString()
+  phone: string;
+
+  @ApiProperty({ example: 'daniel@email.com', required: false })
+  @IsOptional() // Email continua opcional conforme sua regra nova
+  @IsEmail()
+  email?: string;
+
+  @ApiProperty({ example: 'senha123' })
+  @IsNotEmpty()
+  @IsString()
+  password: string;
 }
