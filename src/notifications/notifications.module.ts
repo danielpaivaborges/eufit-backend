@@ -4,7 +4,7 @@ import { PrismaModule } from '../prisma/prisma.module';
 import { AuthModule } from '../auth/auth.module';
 
 @Module({
-  imports: [PrismaModule, AuthModule], // <--- Aqui o segredo: Importamos o AuthModule para ele conhecer o "jwt"
+  imports: [PrismaModule, AuthModule], 
   controllers: [NotificationsController],
 })
 export class NotificationsModule {}
