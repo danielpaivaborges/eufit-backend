@@ -14,19 +14,19 @@ datasource db {
 // =========================================================
 
 enum UserStatus {
-  PENDING           // Cadastro incompleto
-  ACTIVE            // Aprovado e Operacional
-  BLOCKED           // Bloqueio temporário
-  BANNED            // Banimento definitivo
-  UNDER_REVIEW      // Em auditoria
+  PENDING            // Cadastro incompleto
+  ACTIVE             // Aprovado e Operacional
+  BLOCKED            // Bloqueio temporário
+  BANNED             // Banimento definitivo
+  UNDER_REVIEW       // Em auditoria
 }
 
 enum ActiveRole {
-  STUDENT           // Modo Aluno
-  PROFESSIONAL      // Modo Carreira
-  BUSINESS          // Modo Negócio
-  FRANCHISEE        // Modo Franqueado
-  ADMIN             // Modo Super Admin
+  STUDENT            // Modo Aluno
+  PROFESSIONAL       // Modo Carreira
+  BUSINESS           // Modo Negócio
+  FRANCHISEE         // Modo Franqueado
+  ADMIN              // Modo Super Admin
 }
 
 enum ProfessionalType {
@@ -42,21 +42,21 @@ enum ProfessionalType {
 }
 
 enum SpaceType {
-  GYM               // Academia
-  STUDIO            // Estúdio
-  BOX               // Crossfit
-  COURT             // Quadra
-  POOL              // Piscina
-  CLUB              // Clube
-  OUTDOOR_HUB       // Ponto de encontro ao ar livre
+  GYM                // Academia
+  STUDIO             // Estúdio
+  BOX                // Crossfit
+  COURT              // Quadra
+  POOL               // Piscina
+  CLUB               // Clube
+  OUTDOOR_HUB        // Ponto de encontro ao ar livre
 }
 
 enum BookingStatus {
   PENDING_PAYMENT   // Aguardando pgto
-  SCHEDULED         // Pago, aguardando 15min ou aceite
-  CONFIRMED         // Confirmado
-  CHECKED_IN        // Em andamento
-  COMPLETED         // Finalizado
+  SCHEDULED          // Pago, aguardando 15min ou aceite
+  CONFIRMED          // Confirmado
+  CHECKED_IN         // Em andamento
+  COMPLETED          // Finalizado
   CANCELLED_USER    // Aluno cancelou
   CANCELLED_PROVIDER// Profissional/Espaço cancelou
   DISPUTED          // Em disputa
@@ -64,7 +64,7 @@ enum BookingStatus {
 }
 
 enum TransactionType {
-  DEPOSIT           // Entrada
+  DEPOSIT            // Entrada
   PAYMENT_HELD      // Bloqueado para aula
   RELEASE_SPLIT     // Liberado para prestador
   PENALTY           // Multa
@@ -87,14 +87,8 @@ enum FranchiseTier {
 
 model User {
   id            String      @id @default(uuid())
-  
-  // E-MAIL AGORA É OPCIONAL (?)
   email         String?     @unique
-  
-  // TELEFONE AGORA É OBRIGATÓRIO (sem ?)
   phone         String      @unique
-  
-  // Demais campos continuam iguais...
   cpf           String?     @unique
   password      String
   name          String
@@ -105,9 +99,8 @@ model User {
   
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt
-  notifications Notification[]
 
-  // Relações...
+  // Relações
   studentProfile      StudentProfile?
   professionalProfile ProfessionalProfile?
   spaceProfiles       SpaceProfile[]      
@@ -289,16 +282,16 @@ model Class {
 // =========================================================
 
 model Wallet {
-  id              String   @id @default(uuid())
-  userId          String   @unique
-  user            User     @relation(fields: [userId], references: [id])
+  id                String   @id @default(uuid())
+  userId            String   @unique
+  user              User     @relation(fields: [userId], references: [id])
 
   balanceAvailable Decimal @default(0.00) @db.Decimal(10, 2) 
   balanceHeld      Decimal @default(0.00) @db.Decimal(10, 2) 
-  balanceDispute   Decimal @default(0.00) @db.Decimal(10, 2) 
+  balanceDispute    Decimal @default(0.00) @db.Decimal(10, 2) 
 
   transactions    Transaction[]
-  updatedAt       DateTime @updatedAt
+  updatedAt        DateTime @updatedAt
 }
 
 model Transaction {
