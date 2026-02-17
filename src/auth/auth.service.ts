@@ -4,6 +4,7 @@ import {
   UnauthorizedException,
   InternalServerErrorException,
   BadRequestException,
+  NotFoundException, // <--- Adicionei este import
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../prisma/prisma.service';
@@ -18,7 +19,7 @@ export class AuthService {
     private readonly jwtService: JwtService,
   ) {}
 
- async register(registerDto: RegisterDto) {
+  async register(registerDto: RegisterDto) {
     const { name, phone, email, password } = registerDto;
 
     // 1. Validar se o telefone foi enviado
@@ -119,5 +120,49 @@ export class AuthService {
         status: user.status,
       },
     };
+  }
+
+  // --- MÉTODOS DE RECUPERAÇÃO DE SENHA (NOVOS) ---
+
+  async recoverPassword(phone: string) {
+    // 1. Verifica se usuário existe (Opcional: por segurança, não deveríamos avisar se não existe)
+    // Mas para o seu teste, vamos logar.
+    const user = await this.prisma.user.findUnique({ where: { phone } });
+    
+    // Código fixo para teste (MVP)
+    // Em produção: Gerar Math.random(), salvar no Redis com expiração de 5min e enviar via SMS gateway (Zenvia/Twilio)
+    const recoveryCode = '1234'; 
+
+    console.log(`[SIMULAÇÃO SMS] Código de recuperação para ${phone}: ${recoveryCode}`);
+
+    return { 
+      message: 'Se o número estiver cadastrado, o código foi enviado.',
+      debug_code: recoveryCode // Retornamos aqui só para você testar no App sem SMS real
+    };
+  }
+
+  async resetPassword(phone: string, code: string, newPassword: string) {
+    // 1. Validação do Código (No MVP, aceitamos apenas "1234")
+    if (code !== '1234') {
+      throw new BadRequestException('Código de verificação inválido ou expirado.');
+    }
+
+    // 2. Verifica usuário
+    const user = await this.prisma.user.findUnique({ where: { phone } });
+    if (!user) {
+        throw new NotFoundException('Usuário não encontrado.');
+    }
+
+    // 3. Criptografa a nova senha
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(newPassword, salt);
+
+    // 4. Atualiza no Banco
+    await this.prisma.user.update({
+      where: { phone },
+      data: { password: hashedPassword },
+    });
+
+    return { message: 'Senha alterada com sucesso! Faça login.' };
   }
 }
