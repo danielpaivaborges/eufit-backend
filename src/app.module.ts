@@ -2,15 +2,16 @@ import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { PrismaModule } from './prisma/prisma.module';
 import { AuthModule } from './auth/auth.module';
-import { NotificationsController } from './notifications/notifications.controller';
+import { NotificationsModule } from './notifications/notifications.module'; // <--- Importe o novo módulo
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
     PrismaModule,
     AuthModule,
+    NotificationsModule, // <--- Adicione aqui nos imports
   ],
-  controllers: [NotificationsController], // <--- ADICIONE ISSO AQUI
+  controllers: [], // <--- DEIXE VAZIO (O controller agora está no módulo dele)
   providers: [],
 })
 export class AppModule {}
