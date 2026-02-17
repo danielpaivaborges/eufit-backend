@@ -18,10 +18,15 @@ export class AuthService {
     private readonly jwtService: JwtService,
   ) {}
 
-  async register(registerDto: RegisterDto) {
+ async register(registerDto: RegisterDto) {
     const { name, phone, email, password } = registerDto;
 
-    // 1. Verificar se o telefone já está em uso
+    // 1. Validar se o telefone foi enviado
+    if (!phone) {
+      throw new BadRequestException('O número de telefone é obrigatório.');
+    }
+
+    // 2. Verificar duplicidade de telefone
     const userExists = await this.prisma.user.findUnique({
       where: { phone },
     });
@@ -30,31 +35,40 @@ export class AuthService {
       throw new ConflictException('Este número de telefone já está cadastrado.');
     }
 
+    // 3. Verificar duplicidade de e-mail (APENAS SE ELE FOR ENVIADO)
+    if (email) {
+      const emailExists = await this.prisma.user.findUnique({
+        where: { email },
+      });
+      if (emailExists) {
+        throw new ConflictException('Este e-mail já está em uso.');
+      }
+    }
+
     try {
-      // 2. Criptografar a senha
       const salt = await bcrypt.genSalt(10);
       const hashedPassword = await bcrypt.hash(password, salt);
 
-      // 3. Criar o usuário e estruturas relacionadas
-      // CORREÇÃO TS2322: Se email for undefined/null, mandamos uma string vazia ou temp
-      // porque seu schema exige String (não aceita null).
+      // 4. Criação Limpa: Sem gambiarras no e-mail
       const user = await this.prisma.user.create({
         data: {
           name,
           phone,
-          email: email || `${phone}@eufit.temp`, 
+          email: email || null, // Agora o Prisma ACEITA null aqui!
           password: hashedPassword,
           status: 'ACTIVE',
           wallet: {
-            create: {
-              balanceAvailable: 0,
-            },
+            create: { balanceAvailable: 0 },
           },
           studentProfile: {
             create: {
               referralCode: `FIT-${Math.random().toString(36).substring(7).toUpperCase()}`,
             },
           },
+        },
+        include: {
+          wallet: true,
+          studentProfile: true,
         },
       });
 

@@ -87,8 +87,14 @@ enum FranchiseTier {
 
 model User {
   id            String      @id @default(uuid())
-  email         String      @unique
-  phone         String?     @unique
+  
+  // E-MAIL AGORA É OPCIONAL (?)
+  email         String?     @unique
+  
+  // TELEFONE AGORA É OBRIGATÓRIO (sem ?)
+  phone         String      @unique
+  
+  // Demais campos continuam iguais...
   cpf           String?     @unique
   password      String
   name          String
@@ -100,16 +106,14 @@ model User {
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt
 
-  // Perfis
+  // Relações...
   studentProfile      StudentProfile?
   professionalProfile ProfessionalProfile?
   spaceProfiles       SpaceProfile[]      
   franchiseeProfile   FranchiseeProfile?
   adminProfile        AdminProfile?
-
-  // Globais
   wallet              Wallet?
-  addresses           Address[]        
+  addresses           Address[]           
   notifications       Notification[]
 }
 
