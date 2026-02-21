@@ -6,9 +6,6 @@ import { UserStatus } from '@prisma/client';
 export class UsersService {
   constructor(private readonly prisma: PrismaService) {}
 
-  /**
-   * Busca todos os usuários aguardando análise (Visão Admin Global)
-   */
   async findPendingAll() {
     return this.prisma.user.findMany({
       where: { status: 'UNDER_REVIEW' },
@@ -23,30 +20,20 @@ export class UsersService {
         documentBackUrl: true,
         selfieUrl: true,
         createdAt: true,
-        addresses: true // Simplificado para ver todos os endereços vinculados
+        addresses: true 
       },
       orderBy: { createdAt: 'asc' }
     });
   }
 
-  /**
-   * Busca usuários em análise de um território específico (Visão Franqueado)
-   * Agora ignora maiúsculas/minúsculas para evitar erros de digitação.
-   */
   async findPendingByTerritory(city: string, state: string) {
     return this.prisma.user.findMany({
       where: {
         status: 'UNDER_REVIEW',
         addresses: {
           some: {
-            city: {
-              equals: city,
-              mode: 'insensitive', // "Belo Horizonte" = "belo horizonte"
-            },
-            state: {
-              equals: state,
-              mode: 'insensitive',
-            }
+            city: { equals: city, mode: 'insensitive' },
+            state: { equals: state, mode: 'insensitive' }
           }
         }
       },
@@ -62,20 +49,9 @@ export class UsersService {
     });
   }
 
-  /**
-   * Aprova ou Rejeita o cadastro de um aluno
-   */
-  async updateUserStatus(
-    id: string, 
-    status: 'APPROVED' | 'REJECTED', 
-    rejectionReason?: string, 
-    analystComment?: string
-  ) {
+  async updateUserStatus(id: string, status: 'APPROVED' | 'REJECTED', rejectionReason?: string, analystComment?: string) {
     const user = await this.prisma.user.findUnique({ where: { id } });
-
-    if (!user) {
-      throw new NotFoundException('Usuário não encontrado na Éveros Fit.');
-    }
+    if (!user) throw new NotFoundException('Usuário não encontrado.');
 
     try {
       return await this.prisma.user.update({
@@ -92,38 +68,52 @@ export class UsersService {
     }
   }
 
-  /**
-   * Completa o cadastro da Etapa 2 do Aluno e o envia para análise
-   */
-  async completeRegistration(
-    id: string,
-    cpf: string,
-    fatherName: string,
-    motherName: string,
-    fitnessLevel: string
-  ) {
-    const user = await this.prisma.user.findUnique({ where: { id } });
+  // MÉTODO COMPLETO: Agora inclui nomes dos pais e roteamento inteligente
+  async completeRegistration(id: string, cpf: string, fatherName: string, motherName: string, fitnessLevel: string) {
+    const user = await this.prisma.user.findUnique({ 
+      where: { id },
+      include: { addresses: true }
+    });
 
-    if (!user) {
-      throw new NotFoundException('Usuário não encontrado.');
+    if (!user) throw new NotFoundException('Usuário não encontrado.');
+
+    // Roteamento para Franqueado baseado no endereço
+    const userAddress = user.addresses.find(addr => addr.active);
+    let assignedToFranchiseId: string | null = null;
+
+    if (userAddress) {
+      const territory = await this.prisma.franchiseTerritory.findFirst({
+        where: {
+          city: userAddress.city,
+          state: userAddress.state,
+          active: true
+        }
+      });
+      assignedToFranchiseId = territory?.franchiseeId || null;
     }
 
     try {
-      return await this.prisma.user.update({
+      const updatedUser = await this.prisma.user.update({
         where: { id },
         data: {
           cpf,
-          // Convertendo o nível para o formato esperado pelo Prisma
-          fitnessLevel: fitnessLevel as any, 
-          // O MAIS IMPORTANTE: Muda o status para a fila de análise!
-          status: 'UNDER_REVIEW',
-          
-          // URLs simuladas para testarmos a tela de detalhes do Franqueado
+          fatherName,
+          motherName,
+          fitnessLevel: fitnessLevel as any, // Resolve erro de tipagem de Enum
+          status: 'UNDER_REVIEW' as any,
+          // URLs simuladas para visualização no Dashboard do Franqueado
           documentFrontUrl: 'https://placehold.co/600x400/151821/0DC9A7?text=RG+Frente',
           documentBackUrl: 'https://placehold.co/600x400/151821/0DC9A7?text=RG+Verso',
           selfieUrl: 'https://placehold.co/400x600/151821/0DC9A7?text=Selfie+do+Aluno',
         }
       });
+
+      console.log(`[ROTEAMENTO] Enviado para: ${assignedToFranchiseId ? 'Franqueado ' + assignedToFranchiseId : 'Admin Global'}`);
+
+      return {
+        message: 'Dados enviados com sucesso! Sua análise será concluída em até 48h.',
+        status: updatedUser.status
+      };
     } catch (error) {
       throw new InternalServerErrorException('Erro ao processar o cadastro da Etapa 2.');
     }
