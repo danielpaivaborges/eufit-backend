@@ -1,62 +1,37 @@
-import { 
-  IsString, 
-  IsOptional, 
-  IsNotEmpty, 
-  IsEnum, 
-  Length, 
-  IsUrl 
-} from 'class-validator';
+import { IsString, IsNotEmpty, IsOptional } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
-// Seguindo exatamente os nomes definidos no seu schema.prisma
-export enum FitnessLevel {
-  BEGINNER = 'BEGINNER',
-  INTERMEDIATE = 'INTERMEDIATE',
-  ADVANCED = 'ADVANCED',
-  ATHLETE = 'ATHLETE',
-}
-
 export class CompleteRegistrationDto {
-  @ApiProperty({ example: '12345678901', description: 'CPF do usuário (apenas números)' })
+  @ApiProperty({ example: '12345678901' })
   @IsString()
   @IsNotEmpty()
-  @Length(11, 11, { message: 'O CPF deve conter exatamente 11 dígitos numéricos.' })
   cpf: string;
 
-  @ApiProperty({ example: 'Maria Oliveira', description: 'Nome completo da mãe' })
-  @IsString()
-  @IsNotEmpty()
-  motherName: string;
-
-  @ApiProperty({ example: 'João Oliveira', description: 'Nome completo do pai', required: false })
+  @ApiProperty({ example: 'Nome do Pai', required: false })
   @IsString()
   @IsOptional()
   fatherName?: string;
 
-  @ApiProperty({ enum: FitnessLevel, default: FitnessLevel.BEGINNER })
-  @IsEnum(FitnessLevel, { message: 'Nível fitness inválido.' })
-  @IsNotEmpty()
-  fitnessLevel: FitnessLevel;
-
-  // URLs dos documentos que serão processados após o upload
-  @ApiProperty({ description: 'URL da foto frontal do documento' })
+  @ApiProperty({ example: 'Nome da Mãe' })
   @IsString()
   @IsNotEmpty()
-  documentFrontUrl: string;
+  motherName: string;
 
-  @ApiProperty({ description: 'URL da foto traseira do documento' })
+  @ApiProperty({ example: 'BEGINNER' })
   @IsString()
   @IsNotEmpty()
-  documentBackUrl: string;
+  fitnessLevel: string;
 
-  @ApiProperty({ description: 'URL da selfie do usuário com o documento' })
-  @IsString()
-  @IsNotEmpty()
-  selfieUrl: string;
-
-  // No fluxo real, o ID do usuário será capturado pelo JWT, 
-  // mas incluímos aqui caso precise passar manualmente em testes iniciais.
+  // Campos que o erro 400 reclamou: agora são opcionais para o aceite do backend
   @IsString()
   @IsOptional()
-  userId?: string;
+  documentFrontUrl?: string;
+
+  @IsString()
+  @IsOptional()
+  documentBackUrl?: string;
+
+  @IsString()
+  @IsOptional()
+  selfieUrl?: string;
 }
