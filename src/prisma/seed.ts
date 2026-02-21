@@ -4,7 +4,7 @@ import * as bcrypt from 'bcrypt';
 const prisma = new PrismaClient();
 
 async function main() {
-  console.log('🚀 Everos Fit: Iniciando Reset de Segurança Definitivo...');
+  console.log('🚀 A Everos Fit: Iniciando Reset de Segurança Definitivo...');
 
   // 1. LIMPEZA TOTAL (Ordem correta para evitar erro de Foreign Key)
   console.log('🧹 Limpando tabelas de suporte e disputa...');
@@ -21,25 +21,27 @@ async function main() {
   const hashedPassword = await bcrypt.hash('mudar_depois', saltRounds);
 
   // 2. CRIAR ADMINISTRADOR
-  console.log('👤 Criando Admin Everos Fit...');
+  console.log('👤 Criando Admin da Everos Fit...');
   const admin = await prisma.user.create({
     data: {
       email: 'admin@everosfit.com',
       name: 'Daniel Admin',
       password: hashedPassword,
-      phone: '5531999999999', // Com prefixo 55 para bater com o App
+      phone: '5531999999999', 
+      status: 'APPROVED', // Atualizado para o novo Enum do schema
       currentRole: 'ADMIN',
     },
   });
 
   // 3. CRIAR FRANQUEADO
-  console.log('🏢 Criando Franqueado Everos Fit...');
+  console.log('🏢 Criando Franqueado da Everos Fit...');
   const franchise = await prisma.user.create({
     data: {
       email: 'bh@everosfit.com',
       name: 'Franquia Everos BH',
       password: hashedPassword,
       phone: '5531988887777',
+      status: 'APPROVED', // Atualizado para o novo Enum do schema
       currentRole: 'FRANCHISEE',
     },
   });
@@ -58,7 +60,7 @@ async function main() {
     }
   });
 
-  console.log('✅ Everos Fit: Sistema limpo e usuários prontos para login!');
+  console.log('✅ A Everos Fit: Sistema limpo e usuários prontos para login!');
 }
 
 main()
