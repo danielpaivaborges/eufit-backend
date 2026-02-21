@@ -4,7 +4,7 @@ import { AuthService } from './auth.service';
 import { UsersService } from '../users/users.service'; 
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
-import { CompleteRegistrationDto } from './dto/complete-registration.dto'; // Importação do novo DTO
+import { CompleteRegistrationDto } from './dto/complete-registration.dto';
 import { ApiTags, ApiOperation, ApiResponse, ApiBody, ApiBearerAuth } from '@nestjs/swagger';
 
 @ApiTags('auth') 
@@ -46,21 +46,22 @@ export class AuthController {
   @ApiBody({ type: CompleteRegistrationDto })
   async completeRegistration(
     @Request() req, 
-    @Body() body: CompleteRegistrationDto // Tipagem corrigida para o DTO
+    @Body() body: CompleteRegistrationDto // Alterado de 'any' para o DTO correto
   ) {
-    // 1. LOG DE SEGURANÇA: Ver o que chegou de fato
+    // 1. LOG DE SEGURANÇA: Agora isso vai aparecer, pois o DTO vai deixar passar
     console.log('--- NOVA TENTATIVA DE REGISTRO (ETAPA 2) ---');
-    console.log('ID do Usuário logado:', req.user?.sub || req.user?.userId);
+    console.log('Dados do Usuário Autenticado (req.user):', req.user);
+    console.log('Dados do Formulário Recebidos:', body);
 
-    // 2. Extrai o ID do Token JWT
+    // 2. Extrai o ID de forma mais robusta (fallback)
     const userId = req.user?.sub || req.user?.userId || req.user?.id; 
 
     if (!userId) {
-      console.error('ERRO CRÍTICO: Token não contém identificação do usuário.');
+      console.error('ERRO CRÍTICO: Não foi possível extrair o ID do usuário do token JWT.');
       throw new UnauthorizedException('Usuário não identificado. Faça login novamente.');
     }
 
-    // 3. Passa para o Serviço processar e injetar as fotos de teste
+    // 3. Passa para o Serviço
     return this.usersService.completeRegistration(
       userId,
       body.cpf,
