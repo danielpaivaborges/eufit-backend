@@ -4,23 +4,30 @@ import * as bcrypt from 'bcrypt';
 const prisma = new PrismaClient();
 
 async function main() {
-  console.log('🚀 A Everos Fit: Iniciando Reset de Segurança Definitivo...');
+  console.log('🚀 A Everos Fit: Iniciando Configuração de Teste (Nível Unicórnio)...');
 
-  // 1. LIMPEZA TOTAL (Ordem correta para evitar erro de Foreign Key)
-  console.log('🧹 Limpando tabelas de suporte e disputa...');
-  await prisma.ticket.deleteMany({}); // Apaga todos os tickets primeiro
-
-  console.log('🧹 Removendo usuários de teste antigos...');
+  // 1. LIMPEZA TOTAL (Ordem correta para evitar erros de dependência)
+  console.log('🧹 Limpando dados antigos...');
+  await prisma.ticket.deleteMany({});
+  await prisma.address.deleteMany({});
+  await prisma.franchiseTerritory.deleteMany({});
+  await prisma.franchiseeProfile.deleteMany({});
+  await prisma.studentProfile.deleteMany({});
+  
   await prisma.user.deleteMany({
     where: {
-      email: { in: ['admin@everosfit.com', 'bh@everosfit.com', 'admin@eufit.com', 'bh@eufit.com'] }
+      email: { in: [
+        'admin@everosfit.com', 
+        'bh@everosfit.com', 
+        'aluno_teste@everosfit.com'
+      ] }
     }
   });
 
   const saltRounds = 10;
   const hashedPassword = await bcrypt.hash('mudar_depois', saltRounds);
 
-  // 2. CRIAR ADMINISTRADOR
+  // 2. CRIAR ADMINISTRADOR GLOBAL
   console.log('👤 Criando Admin da Everos Fit...');
   const admin = await prisma.user.create({
     data: {
@@ -28,39 +35,69 @@ async function main() {
       name: 'Daniel Admin',
       password: hashedPassword,
       phone: '5531999999999', 
-      status: 'APPROVED', // Atualizado para o novo Enum do schema
+      status: 'APPROVED',
       currentRole: 'ADMIN',
+      adminProfile: { create: { level: 1 } }
     },
   });
 
-  // 3. CRIAR FRANQUEADO
-  console.log('🏢 Criando Franqueado da Everos Fit...');
-  const franchise = await prisma.user.create({
+  // 3. CRIAR FRANQUEADO E SEU PERFIL
+  console.log('🏢 Criando Franqueado e Perfil Regional...');
+  const franchiseUser = await prisma.user.create({
     data: {
       email: 'bh@everosfit.com',
       name: 'Franquia Everos BH',
       password: hashedPassword,
       phone: '5531988887777',
-      status: 'APPROVED', // Atualizado para o novo Enum do schema
+      status: 'APPROVED',
       currentRole: 'FRANCHISEE',
+      franchiseeProfile: {
+        create: { cnpj: '00.000.000/0001-00' }
+      }
     },
+    include: { franchiseeProfile: true }
   });
 
-  // 4. CRIAR TICKETS INICIAIS
-  console.log('🎫 Gerando novos tickets de disputa...');
-  await prisma.ticket.create({
+  // 4. CONFIGURAR TERRITÓRIO (Roteamento BH)
+  console.log('📍 Mapeando Território: Belo Horizonte/MG...');
+  await prisma.franchiseTerritory.create({
     data: {
-      title: 'Disputa de Espaço: Everos Savassi',
-      description: 'Dois profissionais reservaram o mesmo ambiente.',
-      status: 'OPEN',
-      type: 'DISPUTE',
       city: 'Belo Horizonte',
       state: 'MG',
-      reporterId: franchise.id,
+      franchiseeId: franchiseUser.franchiseeProfile?.id,
+      tier: 'TIER_4_METROPOLIS'
     }
   });
 
-  console.log('✅ A Everos Fit: Sistema limpo e usuários prontos para login!');
+  // 5. CRIAR USUÁRIO "LEAD" (ETAPA 1 CONCLUÍDA)
+  console.log('🎓 Criando Aluno de Teste (Status: INCOMPLETE)...');
+  const student = await prisma.user.create({
+    data: {
+      email: 'aluno_teste@everosfit.com',
+      name: 'Daniel Aluno Teste',
+      password: hashedPassword,
+      phone: '5531977776666',
+      status: 'INCOMPLETE', // Iniciando na Etapa 1
+      currentRole: 'STUDENT',
+      studentProfile: {
+        create: { referralCode: 'TESTE-BH' }
+      },
+      addresses: {
+        create: {
+          label: 'Principal',
+          street: 'Praça da Liberdade',
+          number: '100',
+          district: 'Funcionários',
+          city: 'Belo Horizonte', // Cidade mapeada para o franqueado acima
+          state: 'MG',
+          zipCode: '30140-010'
+        }
+      }
+    }
+  });
+
+  console.log('✅ A Everos Fit: Ambiente de roteamento regional pronto!');
+  console.log(`💡 Use o ID: ${student.id} para simular o envio da Etapa 2.`);
 }
 
 main()

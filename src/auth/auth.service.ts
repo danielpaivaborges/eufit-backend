@@ -4,12 +4,13 @@ import {
   UnauthorizedException,
   InternalServerErrorException,
   BadRequestException,
-  NotFoundException, // <--- Adicionei este import
+  NotFoundException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../prisma/prisma.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
+import { CompleteRegistrationDto } from './dto/complete-registration.dto'; // Importado conforme planejado
 import * as bcrypt from 'bcrypt';
 
 @Injectable()
@@ -22,12 +23,10 @@ export class AuthService {
   async register(registerDto: RegisterDto) {
     const { name, phone, email, password } = registerDto;
 
-    // 1. Validar se o telefone foi enviado
     if (!phone) {
       throw new BadRequestException('O número de telefone é obrigatório.');
     }
 
-    // 2. Verificar duplicidade de telefone
     const userExists = await this.prisma.user.findUnique({
       where: { phone },
     });
@@ -36,7 +35,6 @@ export class AuthService {
       throw new ConflictException('Este número de telefone já está cadastrado.');
     }
 
-    // 3. Verificar duplicidade de e-mail (APENAS SE ELE FOR ENVIADO)
     if (email) {
       const emailExists = await this.prisma.user.findUnique({
         where: { email },
@@ -50,14 +48,14 @@ export class AuthService {
       const salt = await bcrypt.genSalt(10);
       const hashedPassword = await bcrypt.hash(password, salt);
 
-      // 4. Criação Limpa: Sem gambiarras no e-mail
+      // A Everos Fit: Cadastro começa como INCOMPLETE agora
       const user = await this.prisma.user.create({
         data: {
           name,
           phone,
-          email: email || null, // Agora o Prisma ACEITA null aqui!
+          email: email || null,
           password: hashedPassword,
-          status: 'ACTIVE',
+          status: 'INCOMPLETE', 
           wallet: {
             create: { balanceAvailable: 0 },
           },
@@ -82,8 +80,70 @@ export class AuthService {
     } catch (error) {
       console.error(error);
       throw new InternalServerErrorException(
-        'Erro ao criar usuário no banco de dados.',
+        'Erro ao criar usuário no banco de dados da Everos Fit.',
       );
+    }
+  }
+
+  // --- NOVA LÓGICA: COMPLEMENTAÇÃO DE CADASTRO (ETAPA 2) ---
+
+  async completeRegistration(dto: CompleteRegistrationDto) {
+    const { cpf, motherName, fatherName, fitnessLevel, documentFrontUrl, documentBackUrl, selfieUrl, userId } = dto;
+
+    // 1. Verificar se o usuário existe
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      include: { addresses: true }
+    });
+
+    if (!user) {
+      throw new NotFoundException('Usuário não encontrado na Everos Fit.');
+    }
+
+    // 2. Roteamento Inteligente: Franqueado vs Admin
+    // Buscamos o endereço ativo (Etapa 1) para definir quem analisa
+    const userAddress = user.addresses.find(addr => addr.active);
+    let assignedToFranchiseId = null;
+
+    if (userAddress) {
+      const territory = await this.prisma.franchiseTerritory.findFirst({
+        where: {
+          city: userAddress.city,
+          state: userAddress.state,
+          active: true
+        }
+      });
+      assignedToFranchiseId = territory?.franchiseeId || null;
+    }
+
+    // 3. Atualizar dados e mudar status para EM ANÁLISE
+    try {
+      const updatedUser = await this.prisma.user.update({
+        where: { id: userId },
+        data: {
+          cpf,
+          motherName,
+          fatherName,
+          fitnessLevel,
+          documentFrontUrl,
+          documentBackUrl,
+          selfieUrl,
+          status: 'UNDER_REVIEW', // Transição de estado conforme briefing
+        }
+      });
+
+      console.log(`[ROTEAMENTO] Cadastro de ${updatedUser.name} enviado para: ${assignedToFranchiseId ? 'Franqueado ' + assignedToFranchiseId : 'Admin Global'}`);
+
+      return {
+        message: 'Dados enviados com sucesso! Sua análise será concluída em até 48h.',
+        status: updatedUser.status,
+        analystType: assignedToFranchiseId ? 'FRANCHISEE' : 'ADMIN'
+      };
+    } catch (error) {
+      if (error.code === 'P2002') {
+        throw new ConflictException('Este CPF já está sendo utilizado por outro usuário.');
+      }
+      throw new InternalServerErrorException('Erro ao processar a complementação do cadastro.');
     }
   }
 
@@ -122,42 +182,30 @@ export class AuthService {
     };
   }
 
-  // --- MÉTODOS DE RECUPERAÇÃO DE SENHA (NOVOS) ---
-
   async recoverPassword(phone: string) {
-    // 1. Verifica se usuário existe (Opcional: por segurança, não deveríamos avisar se não existe)
-    // Mas para o seu teste, vamos logar.
     const user = await this.prisma.user.findUnique({ where: { phone } });
-    
-    // Código fixo para teste (MVP)
-    // Em produção: Gerar Math.random(), salvar no Redis com expiração de 5min e enviar via SMS gateway (Zenvia/Twilio)
     const recoveryCode = '1234'; 
-
     console.log(`[SIMULAÇÃO SMS] Código de recuperação para ${phone}: ${recoveryCode}`);
 
     return { 
       message: 'Se o número estiver cadastrado, o código foi enviado.',
-      debug_code: recoveryCode // Retornamos aqui só para você testar no App sem SMS real
+      debug_code: recoveryCode 
     };
   }
 
   async resetPassword(phone: string, code: string, newPassword: string) {
-    // 1. Validação do Código (No MVP, aceitamos apenas "1234")
     if (code !== '1234') {
       throw new BadRequestException('Código de verificação inválido ou expirado.');
     }
 
-    // 2. Verifica usuário
     const user = await this.prisma.user.findUnique({ where: { phone } });
     if (!user) {
         throw new NotFoundException('Usuário não encontrado.');
     }
 
-    // 3. Criptografa a nova senha
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(newPassword, salt);
 
-    // 4. Atualiza no Banco
     await this.prisma.user.update({
       where: { phone },
       data: { password: hashedPassword },

@@ -1,16 +1,17 @@
-import { Controller, Post, Body, HttpCode, HttpStatus } from '@nestjs/common';
+import { Controller, Post, Body, HttpCode, HttpStatus, Patch } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
+import { CompleteRegistrationDto } from './dto/complete-registration.dto'; // DTO que criaremos a seguir
 import { ApiTags, ApiOperation, ApiResponse, ApiBody } from '@nestjs/swagger';
 
-@ApiTags('auth') // Agrupa as rotas de autenticação no Swagger
+@ApiTags('auth') 
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
   @Post('cadastro')
-  @ApiOperation({ summary: 'Realiza o cadastro de um novo usuário' })
+  @ApiOperation({ summary: 'Realiza o cadastro inicial (Etapa 1) de um novo usuário' })
   @ApiResponse({ status: 201, description: 'Usuário criado com sucesso.' })
   @ApiResponse({ status: 400, description: 'Dados inválidos ou e-mail/telefone já em uso.' })
   @ApiBody({ type: RegisterDto })
@@ -28,7 +29,20 @@ export class AuthController {
     return this.authService.login(loginDto);
   }
 
-  // --- NOVAS ROTAS DE RECUPERAÇÃO ---
+  // --- NOVA ROTA: SEGUNDA ETAPA DO FLUXO DE CADASTRO ---
+
+  @Patch('complete-registration')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Completa a segunda etapa do cadastro (CPF, Filiação, Nível Fitness)' })
+  @ApiResponse({ status: 200, description: 'Dados enviados para análise da Everos Fit.' })
+  @ApiResponse({ status: 400, description: 'Dados de validação incorretos.' })
+  @ApiBody({ type: CompleteRegistrationDto })
+  async completeRegistration(@Body() completeRegistrationDto: CompleteRegistrationDto) {
+    // No fluxo real, o ID do usuário será extraído do JWT via Decorator
+    return this.authService.completeRegistration(completeRegistrationDto);
+  }
+
+  // --- ROTAS DE RECUPERAÇÃO ---
 
   @Post('recover')
   @HttpCode(HttpStatus.OK)
