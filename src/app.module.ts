@@ -3,7 +3,8 @@ import { ConfigModule } from '@nestjs/config';
 import { PrismaModule } from './prisma/prisma.module';
 import { AuthModule } from './auth/auth.module';
 import { NotificationsModule } from './notifications/notifications.module';
-import { TicketsModule } from './tickets/tickets.module'; // <--- Importe o novo módulo de Tickets
+import { TicketsModule } from './tickets/tickets.module'; 
+import { UsersModule } from './users/users.module'; // <--- Importando a gestão de usuários
 
 @Module({
   imports: [
@@ -11,9 +12,10 @@ import { TicketsModule } from './tickets/tickets.module'; // <--- Importe o novo
     PrismaModule,
     AuthModule,
     NotificationsModule,
-    TicketsModule, // <--- Adicione aqui nos imports
+    TicketsModule,
+    UsersModule, // <--- Registrando o motor de análise da Éveros Fit
   ],
-  controllers: [], // <--- DEIXE VAZIO (O controller agora está no módulo dele)
+  controllers: [], 
   providers: [],
 })
 export class AppModule {}
