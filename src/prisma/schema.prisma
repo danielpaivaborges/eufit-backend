@@ -14,19 +14,19 @@ datasource db {
 // =========================================================
 
 enum UserStatus {
-  PENDING            // Cadastro incompleto
-  ACTIVE             // Aprovado e Operacional
-  BLOCKED            // Bloqueio temporário
-  BANNED             // Banimento definitivo
-  UNDER_REVIEW       // Em auditoria
+  PENDING // Cadastro incompleto
+  ACTIVE // Aprovado e Operacional
+  BLOCKED // Bloqueio temporário
+  BANNED // Banimento definitivo
+  UNDER_REVIEW // Em auditoria
 }
 
 enum ActiveRole {
-  STUDENT            // Modo Aluno
-  PROFESSIONAL       // Modo Carreira
-  BUSINESS           // Modo Negócio
-  FRANCHISEE         // Modo Franqueado
-  ADMIN              // Modo Super Admin
+  STUDENT // Modo Aluno
+  PROFESSIONAL // Modo Carreira
+  BUSINESS // Modo Negócio
+  FRANCHISEE // Modo Franqueado
+  ADMIN // Modo Super Admin
 }
 
 enum ProfessionalType {
@@ -42,43 +42,57 @@ enum ProfessionalType {
 }
 
 enum SpaceType {
-  GYM                // Academia
-  STUDIO             // Estúdio
-  BOX                // Crossfit
-  COURT              // Quadra
-  POOL               // Piscina
-  CLUB               // Clube
-  OUTDOOR_HUB        // Ponto de encontro ao ar livre
+  GYM // Academia
+  STUDIO // Estúdio
+  BOX // Crossfit
+  COURT // Quadra
+  POOL // Piscina
+  CLUB // Clube
+  OUTDOOR_HUB // Ponto de encontro ao ar livre
 }
 
 enum BookingStatus {
-  PENDING_PAYMENT   // Aguardando pgto
-  SCHEDULED          // Pago, aguardando 15min ou aceite
-  CONFIRMED          // Confirmado
-  CHECKED_IN         // Em andamento
-  COMPLETED          // Finalizado
-  CANCELLED_USER    // Aluno cancelou
-  CANCELLED_PROVIDER// Profissional/Espaço cancelou
-  DISPUTED          // Em disputa
-  NO_SHOW           // Aluno faltou
+  PENDING_PAYMENT // Aguardando pgto
+  SCHEDULED // Pago, aguardando 15min ou aceite
+  CONFIRMED // Confirmado
+  CHECKED_IN // Em andamento
+  COMPLETED // Finalizado
+  CANCELLED_USER // Aluno cancelou
+  CANCELLED_PROVIDER // Profissional/Espaço cancelou
+  DISPUTED // Em disputa
+  NO_SHOW // Aluno faltou
 }
 
 enum TransactionType {
-  DEPOSIT            // Entrada
-  PAYMENT_HELD      // Bloqueado para aula
-  RELEASE_SPLIT     // Liberado para prestador
-  PENALTY           // Multa
-  REFUND            // Estorno
-  WITHDRAWAL        // Saque
+  DEPOSIT // Entrada
+  PAYMENT_HELD // Bloqueado para aula
+  RELEASE_SPLIT // Liberado para prestador
+  PENALTY // Multa
+  REFUND // Estorno
+  WITHDRAWAL // Saque
   FRANCHISE_COMMISSION // Taxa Franquia
-  REFERRAL_BONUS    // Indicação
+  REFERRAL_BONUS // Indicação
 }
 
 enum FranchiseTier {
-  TIER_1_SMALL      // < 50k hab
-  TIER_2_MEDIUM     // 50k - 200k
-  TIER_3_LARGE      // 200k - 500k
+  TIER_1_SMALL // < 50k hab
+  TIER_2_MEDIUM // 50k - 200k
+  TIER_3_LARGE // 200k - 500k
   TIER_4_METROPOLIS // > 500k
+}
+
+// Novos Enums para Tickets (Suporte e Disputas)
+enum TicketStatus {
+  OPEN // Aberto
+  IN_PROGRESS // Em análise pelo Admin/Franqueado
+  RESOLVED // Resolvido
+  CLOSED // Fechado
+}
+
+enum TicketType {
+  SUPPORT // Dúvida geral / Ajuda
+  DISPUTE // Problema com aula/pagamento/no-show
+  REPORT // Denúncia de comportamento
 }
 
 // =========================================================
@@ -86,49 +100,53 @@ enum FranchiseTier {
 // =========================================================
 
 model User {
-  id            String      @id @default(uuid())
-  email         String?     @unique
-  phone         String      @unique
-  cpf           String?     @unique
-  password      String
-  name          String
-  avatarUrl     String?
-  
-  status        UserStatus  @default(PENDING)
-  currentRole   ActiveRole  @default(STUDENT)
-  
-  createdAt     DateTime    @default(now())
-  updatedAt     DateTime    @updatedAt
+  id        String  @id @default(uuid())
+  email     String? @unique
+  phone     String  @unique
+  cpf       String? @unique
+  password  String
+  name      String
+  avatarUrl String?
+
+  status      UserStatus @default(PENDING)
+  currentRole ActiveRole @default(STUDENT)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Relações
   studentProfile      StudentProfile?
   professionalProfile ProfessionalProfile?
-  spaceProfiles       SpaceProfile[]      
+  spaceProfiles       SpaceProfile[]
   franchiseeProfile   FranchiseeProfile?
   adminProfile        AdminProfile?
   wallet              Wallet?
-  addresses           Address[]           
+  addresses           Address[]
   notifications       Notification[]
+
+  // Suporte e Disputas
+  reportedTickets Ticket[] @relation("ReportedTickets")
+  receivedTickets Ticket[] @relation("ReceivedTickets")
 }
 
 model Address {
-  id          String   @id @default(uuid())
-  label       String   
-  street      String
-  number      String
-  complement  String?
-  district    String   
-  city        String
-  state       String   
-  zipCode     String   
-  
-  latitude    Float?
-  longitude   Float?
+  id         String  @id @default(uuid())
+  label      String
+  street     String
+  number     String
+  complement String?
+  district   String
+  city       String
+  state      String
+  zipCode    String
 
-  active      Boolean  @default(true)
-  userId      String
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
+  latitude  Float?
+  longitude Float?
+
+  active Boolean @default(true)
+  userId String
+  user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   spaceProfileId String?
   spaceProfile   SpaceProfile? @relation(fields: [spaceProfileId], references: [id])
 }
@@ -138,87 +156,87 @@ model Address {
 // =========================================================
 
 model StudentProfile {
-  id            String   @id @default(uuid())
-  userId        String   @unique
-  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id     String @id @default(uuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  referralCode  String   @unique
-  referredById  String?  
-  
-  xp            Int      @default(0)
-  level         Int      @default(1)
+  referralCode String  @unique
+  referredById String?
 
-  bookings      Booking[] 
+  xp    Int @default(0)
+  level Int @default(1)
+
+  bookings Booking[]
 }
 
 model ProfessionalProfile {
-  id            String   @id @default(uuid())
-  userId        String   @unique
-  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id     String @id @default(uuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  type          ProfessionalType
-  documentType  String   // CREF, CRN
-  documentNumber String  
-  documentPhotoUrl String? 
-  selfieVerificationUrl String? 
+  type                  ProfessionalType
+  documentType          String // CREF, CRN
+  documentNumber        String
+  documentPhotoUrl      String?
+  selfieVerificationUrl String?
 
-  bio           String?  @db.Text
-  specialties   String?  
-  
-  radiusKm      Int      @default(10)
-  rating        Decimal  @default(5.0) @db.Decimal(3, 2)
-  ratingCount   Int      @default(0)
+  bio         String? @db.Text
+  specialties String?
+
+  radiusKm    Int     @default(10)
+  rating      Decimal @default(5.0) @db.Decimal(3, 2)
+  ratingCount Int     @default(0)
 
   attendsHome    Boolean @default(false)
   attendsOnline  Boolean @default(false)
   attendsOutdoor Boolean @default(false)
   attendsGym     Boolean @default(true)
 
-  services      Service[]
-  bookings      Booking[] 
+  services Service[]
+  bookings Booking[]
 }
 
 model SpaceProfile {
-  id            String   @id @default(uuid())
-  userId        String   
-  user          User     @relation(fields: [userId], references: [id])
+  id     String @id @default(uuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
 
-  name          String   
-  corporateName String?  
+  name          String
+  corporateName String?
   cnpj          String?
-  
-  type          SpaceType
-  description   String?  @db.Text
-  photos        String?  @db.Text 
-  resources     String?  @db.Text 
-  capacity      Int      @default(100)
 
-  rating        Decimal  @default(5.0) @db.Decimal(3, 2)
-  ratingCount   Int      @default(0)
-  
-  addresses     Address[]
-  services      Service[]
-  classes       Class[]
-  bookings      Booking[] 
+  type        SpaceType
+  description String?   @db.Text
+  photos      String?   @db.Text
+  resources   String?   @db.Text
+  capacity    Int       @default(100)
+
+  rating      Decimal @default(5.0) @db.Decimal(3, 2)
+  ratingCount Int     @default(0)
+
+  addresses Address[]
+  services  Service[]
+  classes   Class[]
+  bookings  Booking[]
 }
 
 model FranchiseeProfile {
-  id            String   @id @default(uuid())
-  userId        String   @unique
-  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id     String @id @default(uuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  cnpj          String?
-  contractUrl   String?  
-  
-  territories   FranchiseTerritory[]
+  cnpj        String?
+  contractUrl String?
+
+  territories FranchiseTerritory[]
 }
 
 model AdminProfile {
-  id            String   @id @default(uuid())
-  userId        String   @unique
-  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
-  level         Int      @default(1) 
+  id     String @id @default(uuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  level Int @default(1)
 }
 
 // =========================================================
@@ -226,18 +244,18 @@ model AdminProfile {
 // =========================================================
 
 model FranchiseTerritory {
-  id            String        @id @default(uuid())
-  city          String
-  state         String
-  ibgeCode      String?       @unique 
-  tier          FranchiseTier @default(TIER_1_SMALL)
-  
-  active        Boolean       @default(true)
-  
-  franchiseeId  String?
-  franchisee    FranchiseeProfile? @relation(fields: [franchiseeId], references: [id])
+  id       String        @id @default(uuid())
+  city     String
+  state    String
+  ibgeCode String?       @unique
+  tier     FranchiseTier @default(TIER_1_SMALL)
 
-  createdAt     DateTime      @default(now())
+  active Boolean @default(true)
+
+  franchiseeId String?
+  franchisee   FranchiseeProfile? @relation(fields: [franchiseeId], references: [id])
+
+  createdAt DateTime @default(now())
 }
 
 // =========================================================
@@ -245,36 +263,36 @@ model FranchiseTerritory {
 // =========================================================
 
 model Service {
-  id          String    @id @default(uuid())
-  name        String    
+  id          String  @id @default(uuid())
+  name        String
   description String?
-  price       Decimal   @db.Decimal(10, 2)
-  durationMin Int       
-  
-  active      Boolean   @default(true)
+  price       Decimal @db.Decimal(10, 2)
+  durationMin Int
+
+  active Boolean @default(true)
 
   professionalProfileId String?
   professionalProfile   ProfessionalProfile? @relation(fields: [professionalProfileId], references: [id])
-   
-  spaceProfileId        String?
-  spaceProfile          SpaceProfile?        @relation(fields: [spaceProfileId], references: [id])
-  
-  bookings    Booking[]
+
+  spaceProfileId String?
+  spaceProfile   SpaceProfile? @relation(fields: [spaceProfileId], references: [id])
+
+  bookings Booking[]
 }
 
 model Class {
-  id          String    @id @default(uuid())
-  name        String    
+  id          String  @id @default(uuid())
+  name        String
   description String?
-  
+
   spaceProfileId String
   spaceProfile   SpaceProfile @relation(fields: [spaceProfileId], references: [id])
-  
-  date        DateTime? 
-  capacity    Int       @default(20)
-  price       Decimal   @db.Decimal(10, 2)
-  
-  bookings    Booking[]
+
+  date     DateTime?
+  capacity Int       @default(20)
+  price    Decimal   @db.Decimal(10, 2)
+
+  bookings Booking[]
 }
 
 // =========================================================
@@ -282,16 +300,16 @@ model Class {
 // =========================================================
 
 model Wallet {
-  id                String   @id @default(uuid())
-  userId            String   @unique
-  user              User     @relation(fields: [userId], references: [id])
+  id     String @id @default(uuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id])
 
-  balanceAvailable Decimal @default(0.00) @db.Decimal(10, 2) 
-  balanceHeld      Decimal @default(0.00) @db.Decimal(10, 2) 
-  balanceDispute    Decimal @default(0.00) @db.Decimal(10, 2) 
+  balanceAvailable Decimal @default(0.00) @db.Decimal(10, 2)
+  balanceHeld      Decimal @default(0.00) @db.Decimal(10, 2)
+  balanceDispute   Decimal @default(0.00) @db.Decimal(10, 2)
 
-  transactions    Transaction[]
-  updatedAt        DateTime @updatedAt
+  transactions Transaction[]
+  updatedAt    DateTime      @updatedAt
 }
 
 model Transaction {
@@ -299,53 +317,54 @@ model Transaction {
   amount      Decimal         @db.Decimal(10, 2)
   type        TransactionType
   description String?
-  
-  walletId    String
-  wallet      Wallet          @relation(fields: [walletId], references: [id])
-  
-  bookingId   String?         
-  booking     Booking?        @relation(fields: [bookingId], references: [id])
 
-  createdAt   DateTime        @default(now())
+  walletId String
+  wallet   Wallet @relation(fields: [walletId], references: [id])
+
+  bookingId String?
+  booking   Booking? @relation(fields: [bookingId], references: [id])
+
+  createdAt DateTime @default(now())
 }
 
 model Booking {
-  id            String        @id @default(uuid())
-  status        BookingStatus @default(PENDING_PAYMENT)
-  
-  studentId     String
-  student       StudentProfile @relation(fields: [studentId], references: [id])
+  id     String        @id @default(uuid())
+  status BookingStatus @default(PENDING_PAYMENT)
 
-  serviceId     String?
-  service       Service?       @relation(fields: [serviceId], references: [id])
-  
-  classId       String?
-  classItem     Class?         @relation(fields: [classId], references: [id]) 
+  studentId String
+  student   StudentProfile @relation(fields: [studentId], references: [id])
+
+  serviceId String?
+  service   Service? @relation(fields: [serviceId], references: [id])
+
+  classId   String?
+  classItem Class?  @relation(fields: [classId], references: [id])
 
   professionalId String?
   professional   ProfessionalProfile? @relation(fields: [professionalId], references: [id])
 
-  spaceId       String?
-  space         SpaceProfile?       @relation(fields: [spaceId], references: [id])
+  spaceId String?
+  space   SpaceProfile? @relation(fields: [spaceId], references: [id])
 
-  scheduledAt   DateTime      
-  checkInAt     DateTime?     
-  completedAt   DateTime?     
+  scheduledAt DateTime
+  checkInAt   DateTime?
+  completedAt DateTime?
 
-  priceTotal    Decimal       @db.Decimal(10, 2) 
-  
+  priceTotal Decimal @db.Decimal(10, 2)
+
   splitAppAmount        Decimal @default(0.00) @db.Decimal(10, 2)
   splitFranchiseeAmount Decimal @default(0.00) @db.Decimal(10, 2)
-  splitProviderAmount   Decimal @default(0.00) @db.Decimal(10, 2) 
-  splitSpaceAmount      Decimal @default(0.00) @db.Decimal(10, 2) 
+  splitProviderAmount   Decimal @default(0.00) @db.Decimal(10, 2)
+  splitSpaceAmount      Decimal @default(0.00) @db.Decimal(10, 2)
 
   cancellationReason String?
-  cancelledBy        String?  
+  cancelledBy        String?
 
-  transactions  Transaction[]
-  
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
+  transactions Transaction[]
+  tickets      Ticket[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model Notification {
@@ -359,4 +378,42 @@ model Notification {
   createdAt DateTime @default(now())
 
   @@map("notifications")
+}
+
+// =========================================================
+// SUPORTE & DISPUTAS
+// =========================================================
+
+model Ticket {
+  id          String @id @default(uuid())
+  title       String
+  description String @db.Text
+
+  status TicketStatus @default(OPEN)
+  type   TicketType   @default(SUPPORT)
+
+  // Localização (Essencial para filtrar pro Franqueado da região)
+  city  String?
+  state String?
+
+  // Resolução (Preenchido pelo Admin/Franqueado quando resolver)
+  resolution String?   @db.Text
+  resolvedAt DateTime?
+
+  // Quem abriu o ticket (Aluno, Personal, etc)
+  reporterId String
+  reporter   User   @relation("ReportedTickets", fields: [reporterId], references: [id])
+
+  // Quem foi denunciado (Opcional, usado em disputas)
+  reportedId String?
+  reported   User?   @relation("ReceivedTickets", fields: [reportedId], references: [id])
+
+  // Qual agendamento gerou o problema (Opcional, usado em disputas financeiras)
+  bookingId String?
+  booking   Booking? @relation(fields: [bookingId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("tickets")
 }
