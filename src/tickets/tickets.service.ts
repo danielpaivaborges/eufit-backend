@@ -1,22 +1,37 @@
-import { Injectable, NotFoundException } from '@nestjs/common'; // Corrigido aqui
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateTicketDto } from './dto/create-ticket.dto';
 import { UpdateTicketDto } from './dto/update-ticket.dto';
-import { ApiTags } from '@nestjs/swagger';
 
 @Injectable()
 export class TicketsService {
   constructor(private prisma: PrismaService) {}
 
-  async create(createTicketDto: CreateTicketDto) {
+  // Agora aceita o userId vindo do Controller
+  async create(userId: string, dto: CreateTicketDto) {
     return this.prisma.ticket.create({
-      data: createTicketDto,
+      data: {
+        title: dto.title,
+        description: dto.description,
+        type: dto.type,
+        city: dto.city,
+        state: dto.state,
+        reporterId: userId, // Vincula o ticket ao usuário logado
+      },
     });
   }
 
   async findAll() {
     return this.prisma.ticket.findMany({
       include: { reporter: { select: { name: true, phone: true } } },
+    });
+  }
+
+  // Método que estava faltando!
+  async findMyTickets(userId: string) {
+    return this.prisma.ticket.findMany({
+      where: { reporterId: userId },
+      orderBy: { createdAt: 'desc' }
     });
   }
 
