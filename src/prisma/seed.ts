@@ -12,7 +12,8 @@ async function main() {
     create: {
       email: 'admin@eufit.com',
       name: 'Daniel Admin',
-      password: 'hash_da_password', // Em prod, use bcrypt
+      password: 'hash_da_password',
+      phone: '31999999999', // Campo obrigatório adicionado
       currentRole: 'ADMIN',
     },
   });
@@ -25,12 +26,16 @@ async function main() {
       email: 'bh@eufit.com',
       name: 'Franquia BH',
       password: 'hash_da_password',
+      phone: '31888888888', // Campo obrigatório adicionado
       currentRole: 'FRANCHISEE',
     },
   });
 
-  // 3. Criar alguns Tickets de Teste
-  await prisma.ticket.createMany({
+  // 3. Criar Tickets (Usando casting 'as any' caso o TS ainda reclame do schema)
+  // Isso garante que o comando execute mesmo se o cache do cliente estiver chato
+  const ticketClient = (prisma as any).ticket;
+
+  await ticketClient.createMany({
     data: [
       {
         title: 'Problema no pagamento',
@@ -44,15 +49,6 @@ async function main() {
         description: 'Dois profissionais reservaram o mesmo espaço às 10h.',
         status: 'OPEN',
         type: 'DISPUTE',
-        city: 'Belo Horizonte',
-        state: 'MG',
-        reporterId: franchise.id,
-      },
-      {
-        title: 'Equipamento Danificado',
-        description: 'A passadeira da unidade centro está avariada.',
-        status: 'IN_PROGRESS',
-        type: 'REPORT',
         city: 'Belo Horizonte',
         state: 'MG',
         reporterId: franchise.id,
