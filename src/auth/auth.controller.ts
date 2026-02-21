@@ -1,7 +1,7 @@
-import { Controller, Post, Body, HttpCode, HttpStatus, Patch, UseGuards, Request } from '@nestjs/common';
-import { AuthGuard } from '@nestjs/passport'; // <--- Necessário para ler o Token JWT
+import { Controller, Post, Body, HttpCode, HttpStatus, Patch, UseGuards, Request, UnauthorizedException } from '@nestjs/common';
+import { AuthGuard } from '@nestjs/passport'; 
 import { AuthService } from './auth.service';
-import { UsersService } from '../users/users.service'; // <--- Importando o serviço que acabamos de alterar
+import { UsersService } from '../users/users.service'; 
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { CompleteRegistrationDto } from './dto/complete-registration.dto';
@@ -12,7 +12,7 @@ import { ApiTags, ApiOperation, ApiResponse, ApiBody, ApiBearerAuth } from '@nes
 export class AuthController {
   constructor(
     private readonly authService: AuthService,
-    private readonly usersService: UsersService // <--- Injetado para salvar os dados
+    private readonly usersService: UsersService 
   ) {}
 
   @Post('cadastro')
@@ -36,7 +36,7 @@ export class AuthController {
 
   // --- NOVA ROTA: SEGUNDA ETAPA DO FLUXO DE CADASTRO ---
 
-  @UseGuards(AuthGuard('jwt')) // <--- Tranca a porta: só entra quem tem Token válido
+  @UseGuards(AuthGuard('jwt')) 
   @ApiBearerAuth()
   @Patch('complete-registration')
   @HttpCode(HttpStatus.OK)
@@ -46,12 +46,22 @@ export class AuthController {
   @ApiBody({ type: CompleteRegistrationDto })
   async completeRegistration(
     @Request() req, 
-    @Body() body: any // Usando 'any' temporário para evitar erro caso o DTO não tenha os campos exatos
+    @Body() body: any 
   ) {
-    // O JWT decodificado guarda o ID do Aluno na propriedade "sub"
-    const userId = req.user.sub; 
+    // 1. LOG DE SEGURANÇA: Ver o que chegou de fato no req.user
+    console.log('--- NOVA TENTATIVA DE REGISTRO (ETAPA 2) ---');
+    console.log('Dados do Usuário Autenticado (req.user):', req.user);
+    console.log('Dados do Formulário Recebidos:', body);
 
-    // Passa a bola para o UsersService fazer a atualização no banco com as fotos simuladas
+    // 2. Extrai o ID de forma mais robusta (fallback)
+    const userId = req.user?.sub || req.user?.userId || req.user?.id; 
+
+    if (!userId) {
+      console.error('ERRO CRÍTICO: Não foi possível extrair o ID do usuário do token JWT.');
+      throw new UnauthorizedException('Usuário não identificado. Faça login novamente.');
+    }
+
+    // 3. Passa para o Serviço
     return this.usersService.completeRegistration(
       userId,
       body.cpf,
