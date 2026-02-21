@@ -1,22 +1,20 @@
 FROM node:18-alpine
 
+# PASSO VITAL: Instala as bibliotecas que o Prisma exige no Alpine
+RUN apk add --no-cache openssl libc6-compat
+
 WORKDIR /app
 
-# Copia apenas o necessário para instalar dependências e garantir cache
 COPY package*.json ./
 RUN npm install
 
-# COPIA A PASTA PRISMA (Migrações e Schema são vitais aqui!)
+# Copia a pasta prisma e gera o client
 COPY src/prisma ./src/prisma
-
-# Copia o resto do código
-COPY . .
-
-# Gera o Prisma Client com a versão exata do package.json
 RUN npx prisma generate --schema=./src/prisma/schema.prisma
 
-# Build do NestJS
+COPY . .
+
 RUN npm run build
 
-# O segredo: Script de inicialização
+# Roda as migrações e inicia o app
 CMD npx prisma migrate deploy --schema=./src/prisma/schema.prisma && npm run start:prod
