@@ -22,15 +22,18 @@ export class CompleteRegistrationDto {
   @IsNotEmpty()
   fitnessLevel: string;
 
-  // Campos que o erro 400 reclamou: agora são opcionais para o aceite do backend
+  // Tornamos as URLs opcionais para o servidor não barrar o envio do App
+  @ApiProperty({ required: false })
   @IsString()
   @IsOptional()
   documentFrontUrl?: string;
 
+  @ApiProperty({ required: false })
   @IsString()
   @IsOptional()
   documentBackUrl?: string;
 
+  @ApiProperty({ required: false })
   @IsString()
   @IsOptional()
   selfieUrl?: string;
