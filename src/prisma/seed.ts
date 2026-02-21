@@ -4,37 +4,35 @@ import * as bcrypt from 'bcrypt';
 const prisma = new PrismaClient();
 
 async function main() {
-  console.log('🌱 Everos Fit: Iniciando semeadura de dados oficiais...');
+  console.log('🚀 Everos Fit: Iniciando reset de segurança...');
 
-  // Gerando o Hash da senha para que o NestJS consiga validar o login
+  // 1. Limpar usuários antigos para garantir que os novos dados entrem limpos
+  console.log('🧹 Removendo dados antigos...');
+  await prisma.user.deleteMany({
+    where: {
+      email: { in: ['admin@everosfit.com', 'bh@everosfit.com', 'admin@eufit.com', 'bh@eufit.com'] }
+    }
+  });
+
   const saltRounds = 10;
   const hashedPassword = await bcrypt.hash('mudar_depois', saltRounds);
 
-  // 1. Criar Usuário Administrador
-  // O telefone inclui o prefixo 55 conforme exigido pelo fluxo do Login.tsx
-  const admin = await prisma.user.upsert({
-    where: { email: 'admin@everosfit.com' },
-    update: {
-      password: hashedPassword,
-      phone: '5531999999999',
-    },
-    create: {
+  // 2. Criar Usuário Administrador (Everos Fit)
+  console.log('👤 Criando Admin...');
+  const admin = await prisma.user.create({
+    data: {
       email: 'admin@everosfit.com',
       name: 'Daniel Admin',
       password: hashedPassword,
-      phone: '5531999999999',
+      phone: '5531999999999', // Com o 55 para o Login.tsx funcionar
       currentRole: 'ADMIN',
     },
   });
 
-  // 2. Criar Usuário Franqueado
-  const franchise = await prisma.user.upsert({
-    where: { email: 'bh@everosfit.com' },
-    update: {
-      password: hashedPassword,
-      phone: '5531988887777',
-    },
-    create: {
+  // 3. Criar Usuário Franqueado (Everos Fit)
+  console.log('🏢 Criando Franqueado...');
+  const franchise = await prisma.user.create({
+    data: {
       email: 'bh@everosfit.com',
       name: 'Franquia Everos BH',
       password: hashedPassword,
@@ -43,24 +41,12 @@ async function main() {
     },
   });
 
-  // 3. Criar Tickets de Suporte e Disputa
-  // Usamos create individual para garantir que o Prisma Client processe cada um corretamente
-  console.log('🎫 Gerando tickets de teste...');
-
+  // 4. Criar Tickets de Teste vinculados aos novos IDs
+  console.log('🎫 Gerando tickets...');
   await (prisma as any).ticket.create({
     data: {
-      title: 'Erro de Sincronização PIX',
-      description: 'O aluno pagou mas o status na Everos Fit não atualizou.',
-      status: 'OPEN',
-      type: 'SUPPORT',
-      reporterId: admin.id,
-    }
-  });
-
-  await (prisma as any).ticket.create({
-    data: {
-      title: 'Disputa de Espaço: Unidade Savassi',
-      description: 'Conflito de reserva entre dois personals no mesmo horário.',
+      title: 'Disputa de Horário: Everos Centro',
+      description: 'Conflito de agenda entre personals.',
       status: 'OPEN',
       type: 'DISPUTE',
       city: 'Belo Horizonte',
@@ -69,12 +55,12 @@ async function main() {
     }
   });
 
-  console.log('✅ Everos Fit: Banco de dados populado com sucesso!');
+  console.log('✅ Everos Fit: Sistema resetado e pronto para login!');
 }
 
 main()
   .catch((e) => {
-    console.error('❌ Erro ao rodar o Seed:', e);
+    console.error('❌ Erro crítico no Seed:', e);
     process.exit(1);
   })
   .finally(async () => {
