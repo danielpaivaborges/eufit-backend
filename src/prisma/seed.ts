@@ -4,10 +4,13 @@ import * as bcrypt from 'bcrypt';
 const prisma = new PrismaClient();
 
 async function main() {
-  console.log('🚀 Everos Fit: Iniciando reset de segurança...');
+  console.log('🚀 Everos Fit: Iniciando Reset de Segurança Definitivo...');
 
-  // 1. Limpar usuários antigos para garantir que os novos dados entrem limpos
-  console.log('🧹 Removendo dados antigos...');
+  // 1. LIMPEZA TOTAL (Ordem correta para evitar erro de Foreign Key)
+  console.log('🧹 Limpando tabelas de suporte e disputa...');
+  await prisma.ticket.deleteMany({}); // Apaga todos os tickets primeiro
+
+  console.log('🧹 Removendo usuários de teste antigos...');
   await prisma.user.deleteMany({
     where: {
       email: { in: ['admin@everosfit.com', 'bh@everosfit.com', 'admin@eufit.com', 'bh@eufit.com'] }
@@ -17,20 +20,20 @@ async function main() {
   const saltRounds = 10;
   const hashedPassword = await bcrypt.hash('mudar_depois', saltRounds);
 
-  // 2. Criar Usuário Administrador (Everos Fit)
-  console.log('👤 Criando Admin...');
+  // 2. CRIAR ADMINISTRADOR
+  console.log('👤 Criando Admin Everos Fit...');
   const admin = await prisma.user.create({
     data: {
       email: 'admin@everosfit.com',
       name: 'Daniel Admin',
       password: hashedPassword,
-      phone: '5531999999999', // Com o 55 para o Login.tsx funcionar
+      phone: '5531999999999', // Com prefixo 55 para bater com o App
       currentRole: 'ADMIN',
     },
   });
 
-  // 3. Criar Usuário Franqueado (Everos Fit)
-  console.log('🏢 Criando Franqueado...');
+  // 3. CRIAR FRANQUEADO
+  console.log('🏢 Criando Franqueado Everos Fit...');
   const franchise = await prisma.user.create({
     data: {
       email: 'bh@everosfit.com',
@@ -41,12 +44,12 @@ async function main() {
     },
   });
 
-  // 4. Criar Tickets de Teste vinculados aos novos IDs
-  console.log('🎫 Gerando tickets...');
-  await (prisma as any).ticket.create({
+  // 4. CRIAR TICKETS INICIAIS
+  console.log('🎫 Gerando novos tickets de disputa...');
+  await prisma.ticket.create({
     data: {
-      title: 'Disputa de Horário: Everos Centro',
-      description: 'Conflito de agenda entre personals.',
+      title: 'Disputa de Espaço: Everos Savassi',
+      description: 'Dois profissionais reservaram o mesmo ambiente.',
       status: 'OPEN',
       type: 'DISPUTE',
       city: 'Belo Horizonte',
@@ -55,7 +58,7 @@ async function main() {
     }
   });
 
-  console.log('✅ Everos Fit: Sistema resetado e pronto para login!');
+  console.log('✅ Everos Fit: Sistema limpo e usuários prontos para login!');
 }
 
 main()
