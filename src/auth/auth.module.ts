@@ -5,11 +5,11 @@ import { PassportModule } from '@nestjs/passport';
 import { JwtModule } from '@nestjs/jwt';
 import { JwtStrategy } from './jwt.strategy';
 import { jwtConstants } from './constants';
-import { UsersModule } from '../users/users.module'; // Importação adicionada
+import { UsersModule } from '../users/users.module'; // <--- CONEXÃO ESSENCIAL
 
 @Module({
   imports: [
-    UsersModule, // Adicionado para resolver a dependência do UsersService
+    UsersModule, // <--- PERMITE O USO DO UsersService AQUI
     PassportModule.register({ defaultStrategy: 'jwt' }),
     JwtModule.register({
       secret: jwtConstants.secret,

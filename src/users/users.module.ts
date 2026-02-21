@@ -6,6 +6,6 @@ import { PrismaService } from '../prisma/prisma.service';
 @Module({
   controllers: [UsersController],
   providers: [UsersService, PrismaService],
-  exports: [UsersService], // Exportado para ser acessível no AuthModule
+  exports: [UsersService], // <--- TORNA O SERVIÇO PÚBLICO PARA O AUTH
 })
 export class UsersModule {}
