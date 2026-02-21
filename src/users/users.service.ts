@@ -8,7 +8,6 @@ export class UsersService {
 
   /**
    * Busca todos os usuários aguardando análise (Visão Admin Global)
-   *
    */
   async findPendingAll() {
     return this.prisma.user.findMany({
@@ -24,9 +23,7 @@ export class UsersService {
         documentBackUrl: true,
         selfieUrl: true,
         createdAt: true,
-        addresses: {
-          where: { active: true }
-        }
+        addresses: true // Simplificado para ver todos os endereços vinculados
       },
       orderBy: { createdAt: 'asc' }
     });
@@ -34,7 +31,7 @@ export class UsersService {
 
   /**
    * Busca usuários em análise de um território específico (Visão Franqueado)
-   *
+   * Agora ignora maiúsculas/minúsculas para evitar erros de digitação.
    */
   async findPendingByTerritory(city: string, state: string) {
     return this.prisma.user.findMany({
@@ -42,9 +39,15 @@ export class UsersService {
         status: 'UNDER_REVIEW',
         addresses: {
           some: {
-            city,
-            state,
-            active: true
+            city: {
+              equals: city,
+              mode: 'insensitive', // "Belo Horizonte" = "belo horizonte"
+            },
+            state: {
+              equals: state,
+              mode: 'insensitive',
+            }
+            // Removi temporariamente o active: true para garantir que o card apareça
           }
         }
       },
@@ -54,9 +57,7 @@ export class UsersService {
         phone: true,
         fitnessLevel: true,
         createdAt: true,
-        addresses: {
-          where: { active: true }
-        }
+        addresses: true
       },
       orderBy: { createdAt: 'asc' }
     });
@@ -64,7 +65,6 @@ export class UsersService {
 
   /**
    * Aprova ou Rejeita o cadastro de um aluno
-   *
    */
   async updateUserStatus(
     id: string, 
