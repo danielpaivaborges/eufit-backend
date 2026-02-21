@@ -103,7 +103,7 @@ export class AuthService {
     // 2. Roteamento Inteligente: Franqueado vs Admin
     // Buscamos o endereço ativo (Etapa 1) para definir quem analisa
     const userAddress = user.addresses.find(addr => addr.active);
-    let assignedToFranchiseId = null;
+    let assignedToFranchiseId: string | null = null;
 
     if (userAddress) {
       const territory = await this.prisma.franchiseTerritory.findFirst({
