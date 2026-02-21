@@ -14,19 +14,27 @@ datasource db {
 // =========================================================
 
 enum UserStatus {
-  PENDING // Cadastro incompleto
-  ACTIVE // Aprovado e Operacional
-  BLOCKED // Bloqueio temporário
-  BANNED // Banimento definitivo
-  UNDER_REVIEW // Em auditoria
+  INCOMPLETE    // Cadastro incompleto (Etapa 1 concluída)
+  UNDER_REVIEW  // Em análise pelo Admin/Franqueado (Etapa 2 enviada)
+  APPROVED      // Aprovado e Operacional (Acesso total liberado)
+  REJECTED      // Rejeitado (Necessita correção do usuário)
+  BLOCKED       // Bloqueio temporário
+  BANNED        // Banimento definitivo
+}
+
+enum FitnessLevel {
+  BEGINNER      // Iniciante
+  INTERMEDIATE  // Intermediário
+  ADVANCED      // Avançado
+  ATHLETE       // Atleta
 }
 
 enum ActiveRole {
-  STUDENT // Modo Aluno
+  STUDENT      // Modo Aluno
   PROFESSIONAL // Modo Carreira
-  BUSINESS // Modo Negócio
-  FRANCHISEE // Modo Franqueado
-  ADMIN // Modo Super Admin
+  BUSINESS     // Modo Negócio
+  FRANCHISEE   // Modo Franqueado
+  ADMIN        // Modo Super Admin
 }
 
 enum ProfessionalType {
@@ -42,57 +50,56 @@ enum ProfessionalType {
 }
 
 enum SpaceType {
-  GYM // Academia
-  STUDIO // Estúdio
-  BOX // Crossfit
-  COURT // Quadra
-  POOL // Piscina
-  CLUB // Clube
-  OUTDOOR_HUB // Ponto de encontro ao ar livre
+  GYM          // Academia
+  STUDIO       // Estúdio
+  BOX          // Crossfit
+  COURT        // Quadra
+  POOL         // Piscina
+  CLUB         // Clube
+  OUTDOOR_HUB  // Ponto de encontro ao ar livre
 }
 
 enum BookingStatus {
-  PENDING_PAYMENT // Aguardando pgto
-  SCHEDULED // Pago, aguardando 15min ou aceite
-  CONFIRMED // Confirmado
-  CHECKED_IN // Em andamento
-  COMPLETED // Finalizado
-  CANCELLED_USER // Aluno cancelou
-  CANCELLED_PROVIDER // Profissional/Espaço cancelou
-  DISPUTED // Em disputa
-  NO_SHOW // Aluno faltou
+  PENDING_PAYMENT      // Aguardando pgto
+  SCHEDULED            // Pago, aguardando 15min ou aceite
+  CONFIRMED            // Confirmado
+  CHECKED_IN           // Em andamento
+  COMPLETED            // Finalizado
+  CANCELLED_USER       // Aluno cancelou
+  CANCELLED_PROVIDER   // Profissional/Espaço cancelou
+  DISPUTED             // Em disputa
+  NO_SHOW              // Aluno faltou
 }
 
 enum TransactionType {
-  DEPOSIT // Entrada
-  PAYMENT_HELD // Bloqueado para aula
-  RELEASE_SPLIT // Liberado para prestador
-  PENALTY // Multa
-  REFUND // Estorno
-  WITHDRAWAL // Saque
-  FRANCHISE_COMMISSION // Taxa Franquia
-  REFERRAL_BONUS // Indicação
+  DEPOSIT               // Entrada
+  PAYMENT_HELD          // Bloqueado para aula
+  RELEASE_SPLIT         // Liberado para prestador
+  PENALTY               // Multa
+  REFUND                // Estorno
+  WITHDRAWAL            // Saque
+  FRANCHISE_COMMISSION  // Taxa Franquia
+  REFERRAL_BONUS        // Indicação
 }
 
 enum FranchiseTier {
-  TIER_1_SMALL // < 50k hab
-  TIER_2_MEDIUM // 50k - 200k
-  TIER_3_LARGE // 200k - 500k
+  TIER_1_SMALL      // < 50k hab
+  TIER_2_MEDIUM     // 50k - 200k
+  TIER_3_LARGE      // 200k - 500k
   TIER_4_METROPOLIS // > 500k
 }
 
-// Novos Enums para Tickets (Suporte e Disputas)
 enum TicketStatus {
-  OPEN // Aberto
-  IN_PROGRESS // Em análise pelo Admin/Franqueado
-  RESOLVED // Resolvido
-  CLOSED // Fechado
+  OPEN          // Aberto
+  IN_PROGRESS   // Em análise pelo Admin/Franqueado
+  RESOLVED      // Resolvido
+  CLOSED        // Fechado
 }
 
 enum TicketType {
-  SUPPORT // Dúvida geral / Ajuda
-  DISPUTE // Problema com aula/pagamento/no-show
-  REPORT // Denúncia de comportamento
+  SUPPORT  // Dúvida geral / Ajuda
+  DISPUTE  // Problema com aula/pagamento/no-show
+  REPORT   // Denúncia de comportamento
 }
 
 // =========================================================
@@ -108,7 +115,22 @@ model User {
   name      String
   avatarUrl String?
 
-  status      UserStatus @default(PENDING)
+  // Novos campos para Etapa 2 de Cadastro
+  fatherName      String?
+  motherName      String?
+  fitnessLevel    FitnessLevel? @default(BEGINNER)
+  
+  // Documentação e Verificação
+  documentFrontUrl String?
+  documentBackUrl  String?
+  selfieUrl        String?
+  
+  // Controle de Análise
+  rejectionReason  String?
+  analystComment   String? @db.Text
+  analyzedAt       DateTime?
+
+  status      UserStatus @default(INCOMPLETE)
   currentRole ActiveRole @default(STUDENT)
 
   createdAt DateTime @default(now())
@@ -130,15 +152,15 @@ model User {
 }
 
 model Address {
-  id         String  @id @default(uuid())
-  label      String
-  street     String
-  number     String
-  complement String?
-  district   String
-  city       String
-  state      String
-  zipCode    String
+  id          String  @id @default(uuid())
+  label       String
+  street      String
+  number      String
+  complement  String?
+  district    String
+  city        String
+  state       String
+  zipCode     String
 
   latitude  Float?
   longitude Float?
@@ -244,11 +266,11 @@ model AdminProfile {
 // =========================================================
 
 model FranchiseTerritory {
-  id       String        @id @default(uuid())
-  city     String
-  state    String
-  ibgeCode String?       @unique
-  tier     FranchiseTier @default(TIER_1_SMALL)
+  id        String        @id @default(uuid())
+  city      String
+  state     String
+  ibgeCode  String?       @unique
+  tier      FranchiseTier @default(TIER_1_SMALL)
 
   active Boolean @default(true)
 
@@ -338,7 +360,7 @@ model Booking {
   service   Service? @relation(fields: [serviceId], references: [id])
 
   classId   String?
-  classItem Class?  @relation(fields: [classId], references: [id])
+  classItem Class?   @relation(fields: [classId], references: [id])
 
   professionalId String?
   professional   ProfessionalProfile? @relation(fields: [professionalId], references: [id])
