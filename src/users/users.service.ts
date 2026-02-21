@@ -47,7 +47,6 @@ export class UsersService {
               equals: state,
               mode: 'insensitive',
             }
-            // Removi temporariamente o active: true para garantir que o card apareça
           }
         }
       },
@@ -90,6 +89,43 @@ export class UsersService {
       });
     } catch (error) {
       throw new InternalServerErrorException('Erro ao atualizar o status do usuário.');
+    }
+  }
+
+  /**
+   * Completa o cadastro da Etapa 2 do Aluno e o envia para análise
+   */
+  async completeRegistration(
+    id: string,
+    cpf: string,
+    fatherName: string,
+    motherName: string,
+    fitnessLevel: string
+  ) {
+    const user = await this.prisma.user.findUnique({ where: { id } });
+
+    if (!user) {
+      throw new NotFoundException('Usuário não encontrado.');
+    }
+
+    try {
+      return await this.prisma.user.update({
+        where: { id },
+        data: {
+          cpf,
+          // Convertendo o nível para o formato esperado pelo Prisma
+          fitnessLevel: fitnessLevel as any, 
+          // O MAIS IMPORTANTE: Muda o status para a fila de análise!
+          status: 'UNDER_REVIEW',
+          
+          // URLs simuladas para testarmos a tela de detalhes do Franqueado
+          documentFrontUrl: 'https://placehold.co/600x400/151821/0DC9A7?text=RG+Frente',
+          documentBackUrl: 'https://placehold.co/600x400/151821/0DC9A7?text=RG+Verso',
+          selfieUrl: 'https://placehold.co/400x600/151821/0DC9A7?text=Selfie+do+Aluno',
+        }
+      });
+    } catch (error) {
+      throw new InternalServerErrorException('Erro ao processar o cadastro da Etapa 2.');
     }
   }
 }

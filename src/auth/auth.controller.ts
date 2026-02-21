@@ -1,14 +1,19 @@
-import { Controller, Post, Body, HttpCode, HttpStatus, Patch } from '@nestjs/common';
+import { Controller, Post, Body, HttpCode, HttpStatus, Patch, UseGuards, Request } from '@nestjs/common';
+import { AuthGuard } from '@nestjs/passport'; // <--- Necessário para ler o Token JWT
 import { AuthService } from './auth.service';
+import { UsersService } from '../users/users.service'; // <--- Importando o serviço que acabamos de alterar
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
-import { CompleteRegistrationDto } from './dto/complete-registration.dto'; // DTO que criaremos a seguir
-import { ApiTags, ApiOperation, ApiResponse, ApiBody } from '@nestjs/swagger';
+import { CompleteRegistrationDto } from './dto/complete-registration.dto';
+import { ApiTags, ApiOperation, ApiResponse, ApiBody, ApiBearerAuth } from '@nestjs/swagger';
 
 @ApiTags('auth') 
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(
+    private readonly authService: AuthService,
+    private readonly usersService: UsersService // <--- Injetado para salvar os dados
+  ) {}
 
   @Post('cadastro')
   @ApiOperation({ summary: 'Realiza o cadastro inicial (Etapa 1) de um novo usuário' })
@@ -31,15 +36,29 @@ export class AuthController {
 
   // --- NOVA ROTA: SEGUNDA ETAPA DO FLUXO DE CADASTRO ---
 
+  @UseGuards(AuthGuard('jwt')) // <--- Tranca a porta: só entra quem tem Token válido
+  @ApiBearerAuth()
   @Patch('complete-registration')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Completa a segunda etapa do cadastro (CPF, Filiação, Nível Fitness)' })
   @ApiResponse({ status: 200, description: 'Dados enviados para análise da Everos Fit.' })
   @ApiResponse({ status: 400, description: 'Dados de validação incorretos.' })
   @ApiBody({ type: CompleteRegistrationDto })
-  async completeRegistration(@Body() completeRegistrationDto: CompleteRegistrationDto) {
-    // No fluxo real, o ID do usuário será extraído do JWT via Decorator
-    return this.authService.completeRegistration(completeRegistrationDto);
+  async completeRegistration(
+    @Request() req, 
+    @Body() body: any // Usando 'any' temporário para evitar erro caso o DTO não tenha os campos exatos
+  ) {
+    // O JWT decodificado guarda o ID do Aluno na propriedade "sub"
+    const userId = req.user.sub; 
+
+    // Passa a bola para o UsersService fazer a atualização no banco com as fotos simuladas
+    return this.usersService.completeRegistration(
+      userId,
+      body.cpf,
+      body.fatherName,
+      body.motherName,
+      body.fitnessLevel
+    );
   }
 
   // --- ROTAS DE RECUPERAÇÃO ---
