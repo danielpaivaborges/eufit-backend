@@ -3,60 +3,67 @@ import { PrismaClient } from '@prisma/client';
 const prisma = new PrismaClient();
 
 async function main() {
-  console.log('🌱 Semeando dados iniciais...');
+  console.log('🌱 Everos Fit: Iniciando semeadura de dados...');
 
-  // 1. Criar Usuário Admin
+  // 1. Criar Usuário Administrador
   const admin = await prisma.user.upsert({
-    where: { email: 'admin@eufit.com' },
+    where: { email: 'admin@everosfit.com' },
     update: {},
     create: {
-      email: 'admin@eufit.com',
+      email: 'admin@everosfit.com',
       name: 'Daniel Admin',
-      password: 'mudar_depois', // Idealmente usar hash aqui
-      phone: '31999998888',
+      password: 'mudar_depois', // Lembre-se de usar hash em produção
+      phone: '5531999998888',
       currentRole: 'ADMIN',
     },
   });
 
   // 2. Criar Usuário Franqueado
   const franchise = await prisma.user.upsert({
-    where: { email: 'bh@eufit.com' },
+    where: { email: 'bh@everosfit.com' },
     update: {},
     create: {
-      email: 'bh@eufit.com',
-      name: 'Franquia Belo Horizonte',
+      email: 'bh@everosfit.com',
+      name: 'Franquia Everos BH',
       password: 'mudar_depois',
-      phone: '31988887777',
+      phone: '5531988887777',
       currentRole: 'FRANCHISEE',
     },
   });
 
-  // 3. Criar Tickets de Teste (Suporte e Disputa)
-  await prisma.ticket.create({
-    data: {
-      title: 'Erro no Checkout PIX',
-      description: 'O QR Code não está sendo gerado na tela final do aluno.',
+  // 3. Criar Tickets de Exemplo (Suporte e Disputas)
+  const ticketsData = [
+    {
+      title: 'Dificuldade no Acesso',
+      description: 'Usuário relata lentidão ao carregar o plano de treinos.',
       status: 'OPEN',
       type: 'SUPPORT',
       reporterId: admin.id,
-    }
-  });
-
-  await prisma.ticket.create({
-    data: {
-      title: 'Disputa: Reserva Duplicada',
-      description: 'Dois personals tentaram reservar o Space 01 no mesmo horário.',
+    },
+    {
+      title: 'Disputa de Espaço: Unidade Centro',
+      description: 'Conflito de agenda entre dois profissionais no Everos Spaces.',
       status: 'OPEN',
       type: 'DISPUTE',
       city: 'Belo Horizonte',
       state: 'MG',
       reporterId: franchise.id,
     }
-  });
+  ];
 
-  console.log('✅ Banco populado com sucesso!');
+  for (const ticket of ticketsData) {
+    // Usamos create individual para garantir compatibilidade com o engine
+    await (prisma as any).ticket.create({ data: ticket });
+  }
+
+  console.log('✅ Everos Fit: Banco de dados populado com sucesso!');
 }
 
 main()
-  .catch((e) => { console.error(e); process.exit(1); })
-  .finally(async () => { await prisma.$disconnect(); });
+  .catch((e) => {
+    console.error('❌ Erro no Seed:', e);
+    process.exit(1);
+  })
+  .finally(async () => {
+    await prisma.$disconnect();
+  });
