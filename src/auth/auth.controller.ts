@@ -46,10 +46,10 @@ export class AuthController {
   @ApiBody({ type: CompleteRegistrationDto })
   async completeRegistration(
     @Request() req, 
-    @Body() body: CompleteRegistrationDto // Alterado de 'any' para o DTO correto
+    @Body() body: CompleteRegistrationDto 
   ) {
-    // 1. LOG DE SEGURANÇA: Agora isso vai aparecer, pois o DTO vai deixar passar
-    console.log('--- NOVA TENTATIVA DE REGISTRO (ETAPA 2) ---');
+    // 1. LOG DE SEGURANÇA: Crucial para confirmar a chegada da requisição no servidor
+    console.log('--- REQUISIÇÃO RECEBIDA: ETAPA 2 ---');
     console.log('Dados do Usuário Autenticado (req.user):', req.user);
     console.log('Dados do Formulário Recebidos:', body);
 
@@ -61,7 +61,7 @@ export class AuthController {
       throw new UnauthorizedException('Usuário não identificado. Faça login novamente.');
     }
 
-    // 3. Passa para o Serviço
+    // 3. Passa para o Serviço realizar a atualização com dados simulados
     return this.usersService.completeRegistration(
       userId,
       body.cpf,

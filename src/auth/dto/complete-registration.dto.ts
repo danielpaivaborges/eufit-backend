@@ -22,16 +22,18 @@ export class CompleteRegistrationDto {
   @IsNotEmpty()
   fitnessLevel: string;
 
-  // Campos que estavam travando o seu envio (Erro 400)
-  // Agora marcados como opcionais para o pedágio da API deixar passar
+  // Tornamos as URLs opcionais para o servidor aceitar o envio do App sem fotos reais
+  @ApiProperty({ required: false })
   @IsString()
   @IsOptional()
   documentFrontUrl?: string;
 
+  @ApiProperty({ required: false })
   @IsString()
   @IsOptional()
   documentBackUrl?: string;
 
+  @ApiProperty({ required: false })
   @IsString()
   @IsOptional()
   selfieUrl?: string;
