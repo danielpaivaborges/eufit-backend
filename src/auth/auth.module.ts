@@ -5,11 +5,11 @@ import { PassportModule } from '@nestjs/passport';
 import { JwtModule } from '@nestjs/jwt';
 import { JwtStrategy } from './jwt.strategy';
 import { jwtConstants } from './constants';
-import { UsersModule } from '../users/users.module'; // <--- CONEXÃO ESSENCIAL
+import { PrismaService } from '../prisma/prisma.service';
+import { UsersService } from '../users/users.service';
 
 @Module({
   imports: [
-    UsersModule, // <--- PERMITE O USO DO UsersService AQUI
     PassportModule.register({ defaultStrategy: 'jwt' }),
     JwtModule.register({
       secret: jwtConstants.secret,
@@ -17,7 +17,7 @@ import { UsersModule } from '../users/users.module'; // <--- CONEXÃO ESSENCIAL
     }),
   ],
   controllers: [AuthController],
-  providers: [AuthService, JwtStrategy],
-  exports: [AuthService, PassportModule, JwtModule],
+  providers: [AuthService, JwtStrategy, PrismaService, UsersService],
+  exports: [AuthService],
 })
 export class AuthModule {}
